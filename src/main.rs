@@ -56,6 +56,11 @@ fn echo() {
     println!("");
 }
 
+fn pwd() {
+    let cwd = std::env::current_dir().unwrap();
+    println!("{}", cwd.display());
+}
+
 fn wc() {
     let mut args = env::args();
     args.next();
@@ -132,6 +137,7 @@ fn main() {
     };
     util_funcs.add_func("cat", cat);
     util_funcs.add_func("echo", echo);
+    util_funcs.add_func("pwd", pwd);
     util_funcs.add_func("wc", wc);
 
     util_funcs.utils.get(util_name.as_str()).unwrap()();
