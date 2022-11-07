@@ -9,10 +9,17 @@ fn cat() {
     args.next();
     args.next();
 
+    let mut first = true;
     loop {
         let filename = match args.next() {
-            Some(a) => a,
-            _ => break,
+            Some(name) => name,
+            _ => {
+                if first {
+                    "/dev/stdin".to_string()
+                } else {
+                    break;
+                }
+            }
         };
 
         let file = File::open(filename).unwrap();
@@ -22,6 +29,8 @@ fn cat() {
             let line = line.unwrap();
             println!("{}", line);
         }
+
+        first = false;
     }
 }
 
