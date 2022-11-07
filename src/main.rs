@@ -34,6 +34,28 @@ fn cat() {
     }
 }
 
+fn echo() {
+    let mut args = env::args();
+    args.next();
+    args.next();
+
+    let mut first = true;
+    loop {
+        let s = match args.next() {
+            Some(name) => name,
+            _ => break,
+        };
+
+        if first {
+            print!("{}", s);
+        } else {
+            print!(" {}", s);
+        }
+        first = false;
+    }
+    println!("");
+}
+
 struct CallbackContainer {
     utils: HashMap<String, fn()>,
 }
@@ -60,6 +82,7 @@ fn main() {
         utils: HashMap::new(),
     };
     util_funcs.add_func("cat", cat);
+    util_funcs.add_func("echo", echo);
 
     util_funcs.utils.get(util_name.as_str()).unwrap()();
 }
