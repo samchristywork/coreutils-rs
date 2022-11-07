@@ -61,6 +61,10 @@ fn wc() {
     args.next();
     args.next();
 
+    let mut total_lines = 0;
+    let mut total_words = 0;
+    let mut total_characters = 0;
+
     let mut first = true;
     loop {
         let filename = match args.next() {
@@ -91,9 +95,14 @@ fn wc() {
             characters += line.len() + 1;
         }
         println!("{} {} {} {}", lines, words, characters, filename);
+        total_lines += lines;
+        total_words += words;
+        total_characters += characters;
 
         first = false;
     }
+
+    println!("{} {} {} total", total_lines, total_words, total_characters);
 }
 
 struct CallbackContainer {
