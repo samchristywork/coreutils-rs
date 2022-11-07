@@ -56,6 +56,46 @@ fn echo() {
     println!("");
 }
 
+fn wc() {
+    let mut args = env::args();
+    args.next();
+    args.next();
+
+    let mut first = true;
+    loop {
+        let filename = match args.next() {
+            Some(name) => name,
+            _ => {
+                if first {
+                    "/dev/stdin".to_string()
+                } else {
+                    break;
+                }
+            }
+        };
+
+        let mut lines = 0;
+        let mut words = 0;
+        let mut characters = 0;
+        let file = File::open(filename.as_str()).unwrap();
+        let reader = BufReader::new(file);
+
+        for line in reader.lines() {
+            let line = line.unwrap();
+            lines += 1;
+            for s in line.split(" ") {
+                if !s.eq("") {
+                    words += 1;
+                }
+            }
+            characters += line.len() + 1;
+        }
+        println!("{} {} {} {}", lines, words, characters, filename);
+
+        first = false;
+    }
+}
+
 struct CallbackContainer {
     utils: HashMap<String, fn()>,
 }
@@ -83,6 +123,7 @@ fn main() {
     };
     util_funcs.add_func("cat", cat);
     util_funcs.add_func("echo", echo);
+    util_funcs.add_func("wc", wc);
 
     util_funcs.utils.get(util_name.as_str()).unwrap()();
 }
