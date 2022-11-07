@@ -34,6 +34,16 @@ fn cat() {
     }
 }
 
+struct CallbackContainer {
+    utils: HashMap<String, fn()>,
+}
+
+impl CallbackContainer {
+    fn add_func(&mut self, name: &str, func: fn()) {
+        self.utils.insert(String::new() + name, func);
+    }
+}
+
 fn main() {
     let mut args = env::args();
     let program_name = args.next().unwrap();
@@ -46,10 +56,10 @@ fn main() {
         }
     };
 
-    let util_funcs = HashMap::from([("cat", cat)]);
-
-    match util_funcs.get(util_name.as_str()) {
-        Some(util_func) => util_func(),
-        None => println!("b"),
+    let mut util_funcs = CallbackContainer {
+        utils: HashMap::new(),
     };
+    util_funcs.add_func("cat", cat);
+
+    util_funcs.utils.get(util_name.as_str()).unwrap()();
 }
