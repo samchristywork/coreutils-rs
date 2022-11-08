@@ -147,6 +147,12 @@ fn wc() {
     println!("{} {} {} total", total_lines, total_words, total_characters);
 }
 
+fn yes() {
+    loop {
+        println!("y");
+    }
+}
+
 fn true_fn() {
     std::process::exit(0);
 }
@@ -232,6 +238,7 @@ fn main() {
     util_funcs.add_func("nproc", nproc);
     util_funcs.add_func("pwd", pwd);
     util_funcs.add_func("wc", wc);
+    util_funcs.add_func("yes", yes);
     util_funcs.add_func("true", true_fn);
     util_funcs.add_func("false", false_fn);
     util_funcs.add_func("head", head);
