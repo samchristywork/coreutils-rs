@@ -76,6 +76,18 @@ fn echo() {
     println!("");
 }
 
+fn ls() {
+    let mut args = env::args();
+    args.next();
+    args.next();
+
+    let dir = args.next().unwrap();
+    let paths = fs::read_dir(dir).unwrap();
+    for path in paths {
+        println!("{}", path.unwrap().file_name().to_str().unwrap());
+    }
+}
+
 fn nproc() {
     let paths = fs::read_dir("/sys/class/cpuid").unwrap();
     println!("{}", paths.count());
@@ -163,6 +175,7 @@ fn main() {
     util_funcs.add_func("cat", cat);
     util_funcs.add_func("cp", cp);
     util_funcs.add_func("echo", echo);
+    util_funcs.add_func("ls", ls);
     util_funcs.add_func("nproc", nproc);
     util_funcs.add_func("pwd", pwd);
     util_funcs.add_func("wc", wc);
