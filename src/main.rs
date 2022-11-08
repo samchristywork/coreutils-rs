@@ -147,6 +147,14 @@ fn wc() {
     println!("{} {} {} total", total_lines, total_words, total_characters);
 }
 
+fn true_fn() {
+    std::process::exit(0);
+}
+
+fn false_fn() {
+    std::process::exit(1);
+}
+
 struct CallbackContainer {
     utils: HashMap<String, fn()>,
 }
@@ -179,6 +187,8 @@ fn main() {
     util_funcs.add_func("nproc", nproc);
     util_funcs.add_func("pwd", pwd);
     util_funcs.add_func("wc", wc);
+    util_funcs.add_func("true", true_fn);
+    util_funcs.add_func("false", false_fn);
 
     util_funcs.utils.get(util_name.as_str()).unwrap()();
 }
