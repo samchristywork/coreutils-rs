@@ -2,6 +2,7 @@ use std::collections::HashMap;
 use std::env;
 use std::fs;
 use std::fs::File;
+use std::io::Write;
 use std::io::{BufRead, BufReader};
 use std::process;
 
@@ -32,6 +33,24 @@ fn cat() {
         }
 
         first = false;
+    }
+}
+
+fn cp() {
+    let mut args = env::args();
+    args.next();
+    args.next();
+
+    let source_filename = args.next().unwrap();
+    let dest_filename = args.next().unwrap();
+
+    let mut dest = File::create(dest_filename).unwrap();
+    let source = File::open(source_filename).unwrap();
+    let reader = BufReader::new(source);
+
+    for line in reader.lines() {
+        let line = line.unwrap() + "\n";
+        dest.write_all(line.as_bytes()).unwrap();
     }
 }
 
@@ -142,6 +161,7 @@ fn main() {
         utils: HashMap::new(),
     };
     util_funcs.add_func("cat", cat);
+    util_funcs.add_func("cp", cp);
     util_funcs.add_func("echo", echo);
     util_funcs.add_func("nproc", nproc);
     util_funcs.add_func("pwd", pwd);
