@@ -155,6 +155,51 @@ fn false_fn() {
     std::process::exit(1);
 }
 
+fn head() {
+    let mut args = env::args();
+    args.next();
+    args.next();
+
+    let filename = args.next().unwrap();
+
+    let file = File::open(filename).unwrap();
+    let reader = BufReader::new(file);
+
+    let mut idx = 0;
+    for line in reader.lines() {
+        let line = line.unwrap();
+        println!("{}", line);
+        if idx > 8 {
+            break;
+        }
+        idx += 1;
+    }
+}
+
+fn tail() {
+    let mut args = env::args();
+    args.next();
+    args.next();
+
+    let filename = args.next().unwrap();
+
+    let file = File::open(filename).unwrap();
+    let reader = BufReader::new(file);
+
+    let mut foo: Vec<String> = vec![];
+    for line in reader.lines() {
+        let line = line.unwrap();
+        foo.push(line);
+        if foo.len() > 10 {
+            foo.remove(0);
+        }
+    }
+
+    for line in foo {
+        println!("{}", line);
+    }
+}
+
 struct CallbackContainer {
     utils: HashMap<String, fn()>,
 }
@@ -189,6 +234,8 @@ fn main() {
     util_funcs.add_func("wc", wc);
     util_funcs.add_func("true", true_fn);
     util_funcs.add_func("false", false_fn);
+    util_funcs.add_func("head", head);
+    util_funcs.add_func("tail", tail);
 
     util_funcs.utils.get(util_name.as_str()).unwrap()();
 }
