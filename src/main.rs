@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 use std::env;
+use std::fs;
 use std::fs::File;
 use std::io::{BufRead, BufReader};
 use std::process;
@@ -54,6 +55,11 @@ fn echo() {
         first = false;
     }
     println!("");
+}
+
+fn nproc() {
+    let paths = fs::read_dir("/sys/class/cpuid").unwrap();
+    println!("{}", paths.count());
 }
 
 fn pwd() {
@@ -137,6 +143,7 @@ fn main() {
     };
     util_funcs.add_func("cat", cat);
     util_funcs.add_func("echo", echo);
+    util_funcs.add_func("nproc", nproc);
     util_funcs.add_func("pwd", pwd);
     util_funcs.add_func("wc", wc);
 
