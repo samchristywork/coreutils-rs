@@ -1,7 +1,10 @@
+use md5;
+use sha2::{Digest, Sha512};
 use std::collections::HashMap;
 use std::env;
 use std::fs;
 use std::fs::File;
+use std::fs::OpenOptions;
 use std::io::Write;
 use std::io::{BufRead, BufReader};
 use std::process;
@@ -76,6 +79,16 @@ fn echo() {
     println!("");
 }
 
+extern "C" {
+    fn gethostid() -> i64;
+}
+
+fn hostid() {
+    unsafe {
+        println!("{:x}", gethostid() & 0xffffffff);
+    }
+}
+
 fn ls() {
     let mut args = env::args();
     args.next();
@@ -88,14 +101,128 @@ fn ls() {
     }
 }
 
+fn md5_fn() {
+    let mut args = env::args();
+    args.next();
+    args.next();
+
+    let filename = args.next().unwrap();
+    let contents = fs::read_to_string(filename.as_str());
+    let digest = md5::compute(contents.unwrap().as_bytes());
+    println!("{:x} {}", digest, filename);
+}
+
+fn nl() {
+    let mut args = env::args();
+    args.next();
+    args.next();
+
+    let mut idx = 0;
+    let mut first = true;
+    loop {
+        let filename = match args.next() {
+            Some(name) => name,
+            _ => {
+                if first {
+                    "/dev/stdin".to_string()
+                } else {
+                    break;
+                }
+            }
+        };
+
+        let file = File::open(filename).unwrap();
+        let reader = BufReader::new(file);
+
+        for line in reader.lines() {
+            let line = line.unwrap();
+            println!("{} {}", idx, line);
+            idx += 1;
+        }
+
+        first = false;
+    }
+}
+
 fn nproc() {
     let paths = fs::read_dir("/sys/class/cpuid").unwrap();
     println!("{}", paths.count());
 }
 
+fn printenv() {
+    let env = env::vars();
+    for e in env {
+        println!("{}={}", e.0.as_str(), e.1.as_str());
+    }
+}
+
 fn pwd() {
     let cwd = std::env::current_dir().unwrap();
     println!("{}", cwd.display());
+}
+
+fn sha512sum() {
+    let mut args = env::args();
+    args.next();
+    args.next();
+
+    let mut first = true;
+    loop {
+        let filename = match args.next() {
+            Some(name) => name,
+            _ => {
+                if first {
+                    "/dev/stdin".to_string()
+                } else {
+                    break;
+                }
+            }
+        };
+
+        let file = File::open(filename.as_str()).unwrap();
+        let reader = BufReader::new(file);
+
+        let mut hasher = Sha512::new();
+        for line in reader.lines() {
+            let line = line.unwrap();
+            hasher.update(line + "\n");
+        }
+        let result = hasher.finalize();
+        println!("{:x} {}", result, filename.as_str());
+
+        first = false;
+    }
+}
+
+fn truncate() {
+    let mut args = env::args();
+    args.next();
+    args.next();
+
+    let mut filename = String::new();
+    let mut size = 0;
+    let mut sizearg = false;
+    for arg in args {
+        if arg == "--size" {
+            sizearg = true;
+            continue;
+        }
+        if sizearg == true {
+            sizearg = false;
+            if arg.ends_with("S") {
+                let mut chars = arg.chars();
+                chars.next_back();
+                size = str::parse(chars.as_str()).unwrap();
+            } else {
+                size = str::parse(arg.as_str()).unwrap();
+            }
+            continue;
+        }
+        filename = arg;
+    }
+
+    let f = OpenOptions::new().append(true).open(filename).unwrap();
+    f.set_len(size).unwrap();
 }
 
 fn wc() {
@@ -233,16 +360,23 @@ fn main() {
     };
     util_funcs.add_func("cat", cat);
     util_funcs.add_func("cp", cp);
+    util_funcs.add_func("dir", ls);
     util_funcs.add_func("echo", echo);
-    util_funcs.add_func("ls", ls);
-    util_funcs.add_func("nproc", nproc);
-    util_funcs.add_func("pwd", pwd);
-    util_funcs.add_func("wc", wc);
-    util_funcs.add_func("yes", yes);
-    util_funcs.add_func("true", true_fn);
     util_funcs.add_func("false", false_fn);
     util_funcs.add_func("head", head);
+    util_funcs.add_func("hostid", hostid);
+    util_funcs.add_func("ls", ls);
+    util_funcs.add_func("md5", md5_fn);
+    util_funcs.add_func("nl", nl);
+    util_funcs.add_func("nproc", nproc);
+    util_funcs.add_func("printenv", printenv);
+    util_funcs.add_func("pwd", pwd);
+    util_funcs.add_func("sha512sum", sha512sum);
     util_funcs.add_func("tail", tail);
+    util_funcs.add_func("true", true_fn);
+    util_funcs.add_func("truncate", truncate);
+    util_funcs.add_func("wc", wc);
+    util_funcs.add_func("yes", yes);
 
     util_funcs.utils.get(util_name.as_str()).unwrap()();
 }
