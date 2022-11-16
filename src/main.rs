@@ -1,83 +1,11 @@
-use md5;
-use sha2::{Digest, Sha512};
 use std::collections::HashMap;
 use std::env;
 use std::fs;
-use std::fs::File;
 use std::fs::OpenOptions;
-use std::io::Write;
-use std::io::{BufRead, BufReader};
 use std::process;
 
-fn cat() {
-    let mut args = env::args();
-    args.next();
-    args.next();
-
-    let mut first = true;
-    loop {
-        let filename = match args.next() {
-            Some(name) => name,
-            _ => {
-                if first {
-                    "/dev/stdin".to_string()
-                } else {
-                    break;
-                }
-            }
-        };
-
-        let file = File::open(filename).unwrap();
-        let reader = BufReader::new(file);
-
-        for line in reader.lines() {
-            let line = line.unwrap();
-            println!("{}", line);
-        }
-
-        first = false;
-    }
-}
-
-fn cp() {
-    let mut args = env::args();
-    args.next();
-    args.next();
-
-    let source_filename = args.next().unwrap();
-    let dest_filename = args.next().unwrap();
-
-    let mut dest = File::create(dest_filename).unwrap();
-    let source = File::open(source_filename).unwrap();
-    let reader = BufReader::new(source);
-
-    for line in reader.lines() {
-        let line = line.unwrap() + "\n";
-        dest.write_all(line.as_bytes()).unwrap();
-    }
-}
-
-fn echo() {
-    let mut args = env::args();
-    args.next();
-    args.next();
-
-    let mut first = true;
-    loop {
-        let s = match args.next() {
-            Some(name) => name,
-            _ => break,
-        };
-
-        if first {
-            print!("{}", s);
-        } else {
-            print!(" {}", s);
-        }
-        first = false;
-    }
-    println!("");
-}
+pub mod crypto;
+pub mod io;
 
 extern "C" {
     fn gethostid() -> i64;
@@ -101,49 +29,6 @@ fn ls() {
     }
 }
 
-fn md5_fn() {
-    let mut args = env::args();
-    args.next();
-    args.next();
-
-    let filename = args.next().unwrap();
-    let contents = fs::read_to_string(filename.as_str());
-    let digest = md5::compute(contents.unwrap().as_bytes());
-    println!("{:x} {}", digest, filename);
-}
-
-fn nl() {
-    let mut args = env::args();
-    args.next();
-    args.next();
-
-    let mut idx = 0;
-    let mut first = true;
-    loop {
-        let filename = match args.next() {
-            Some(name) => name,
-            _ => {
-                if first {
-                    "/dev/stdin".to_string()
-                } else {
-                    break;
-                }
-            }
-        };
-
-        let file = File::open(filename).unwrap();
-        let reader = BufReader::new(file);
-
-        for line in reader.lines() {
-            let line = line.unwrap();
-            println!("{} {}", idx, line);
-            idx += 1;
-        }
-
-        first = false;
-    }
-}
-
 fn nproc() {
     let paths = fs::read_dir("/sys/class/cpuid").unwrap();
     println!("{}", paths.count());
@@ -159,39 +44,6 @@ fn printenv() {
 fn pwd() {
     let cwd = std::env::current_dir().unwrap();
     println!("{}", cwd.display());
-}
-
-fn sha512sum() {
-    let mut args = env::args();
-    args.next();
-    args.next();
-
-    let mut first = true;
-    loop {
-        let filename = match args.next() {
-            Some(name) => name,
-            _ => {
-                if first {
-                    "/dev/stdin".to_string()
-                } else {
-                    break;
-                }
-            }
-        };
-
-        let file = File::open(filename.as_str()).unwrap();
-        let reader = BufReader::new(file);
-
-        let mut hasher = Sha512::new();
-        for line in reader.lines() {
-            let line = line.unwrap();
-            hasher.update(line + "\n");
-        }
-        let result = hasher.finalize();
-        println!("{:x} {}", result, filename.as_str());
-
-        first = false;
-    }
 }
 
 fn truncate() {
@@ -225,112 +77,12 @@ fn truncate() {
     f.set_len(size).unwrap();
 }
 
-fn wc() {
-    let mut args = env::args();
-    args.next();
-    args.next();
-
-    let mut total_lines = 0;
-    let mut total_words = 0;
-    let mut total_characters = 0;
-
-    let mut first = true;
-    loop {
-        let filename = match args.next() {
-            Some(name) => name,
-            _ => {
-                if first {
-                    "/dev/stdin".to_string()
-                } else {
-                    break;
-                }
-            }
-        };
-
-        let mut lines = 0;
-        let mut words = 0;
-        let mut characters = 0;
-        let file = File::open(filename.as_str()).unwrap();
-        let reader = BufReader::new(file);
-
-        for line in reader.lines() {
-            let line = line.unwrap();
-            lines += 1;
-            for s in line.split(" ") {
-                if !s.eq("") {
-                    words += 1;
-                }
-            }
-            characters += line.len() + 1;
-        }
-        println!("{} {} {} {}", lines, words, characters, filename);
-        total_lines += lines;
-        total_words += words;
-        total_characters += characters;
-
-        first = false;
-    }
-
-    println!("{} {} {} total", total_lines, total_words, total_characters);
-}
-
-fn yes() {
-    loop {
-        println!("y");
-    }
-}
-
 fn true_fn() {
     std::process::exit(0);
 }
 
 fn false_fn() {
     std::process::exit(1);
-}
-
-fn head() {
-    let mut args = env::args();
-    args.next();
-    args.next();
-
-    let filename = args.next().unwrap();
-
-    let file = File::open(filename).unwrap();
-    let reader = BufReader::new(file);
-
-    let mut idx = 0;
-    for line in reader.lines() {
-        let line = line.unwrap();
-        println!("{}", line);
-        if idx > 8 {
-            break;
-        }
-        idx += 1;
-    }
-}
-
-fn tail() {
-    let mut args = env::args();
-    args.next();
-    args.next();
-
-    let filename = args.next().unwrap();
-
-    let file = File::open(filename).unwrap();
-    let reader = BufReader::new(file);
-
-    let mut foo: Vec<String> = vec![];
-    for line in reader.lines() {
-        let line = line.unwrap();
-        foo.push(line);
-        if foo.len() > 10 {
-            foo.remove(0);
-        }
-    }
-
-    for line in foo {
-        println!("{}", line);
-    }
 }
 
 struct CallbackContainer {
@@ -358,25 +110,25 @@ fn main() {
     let mut util_funcs = CallbackContainer {
         utils: HashMap::new(),
     };
-    util_funcs.add_func("cat", cat);
-    util_funcs.add_func("cp", cp);
+    util_funcs.add_func("cat", io::cat);
+    util_funcs.add_func("cp", io::cp);
     util_funcs.add_func("dir", ls);
-    util_funcs.add_func("echo", echo);
+    util_funcs.add_func("echo", io::echo);
     util_funcs.add_func("false", false_fn);
-    util_funcs.add_func("head", head);
+    util_funcs.add_func("head", io::head);
     util_funcs.add_func("hostid", hostid);
     util_funcs.add_func("ls", ls);
-    util_funcs.add_func("md5", md5_fn);
-    util_funcs.add_func("nl", nl);
+    util_funcs.add_func("md5sum", crypto::md5sum);
+    util_funcs.add_func("nl", io::nl);
     util_funcs.add_func("nproc", nproc);
     util_funcs.add_func("printenv", printenv);
     util_funcs.add_func("pwd", pwd);
-    util_funcs.add_func("sha512sum", sha512sum);
-    util_funcs.add_func("tail", tail);
+    util_funcs.add_func("sha512sum", crypto::sha512sum);
+    util_funcs.add_func("tail", io::tail);
     util_funcs.add_func("true", true_fn);
     util_funcs.add_func("truncate", truncate);
-    util_funcs.add_func("wc", wc);
-    util_funcs.add_func("yes", yes);
+    util_funcs.add_func("wc", io::wc);
+    util_funcs.add_func("yes", io::yes);
 
     util_funcs.utils.get(util_name.as_str()).unwrap()();
 }
