@@ -12,7 +12,7 @@ struct CallbackContainer {
 }
 
 impl CallbackContainer {
-    fn add_func(&mut self, name: &str, func: fn()) {
+    fn add_func(&mut self, func: fn(), name: &str) {
         self.utils.insert(String::new() + name, func);
     }
 }
@@ -32,25 +32,25 @@ fn main() {
     let mut util_funcs = CallbackContainer {
         utils: HashMap::new(),
     };
-    util_funcs.add_func("cat", io::cat);
-    util_funcs.add_func("cp", io::cp);
-    util_funcs.add_func("dir", filesystem::ls);
-    util_funcs.add_func("echo", io::echo);
-    util_funcs.add_func("false", miscellaneous::false_fn);
-    util_funcs.add_func("head", io::head);
-    util_funcs.add_func("hostid", miscellaneous::hostid);
-    util_funcs.add_func("ls", filesystem::ls);
-    util_funcs.add_func("md5sum", crypto::md5sum);
-    util_funcs.add_func("nl", io::nl);
-    util_funcs.add_func("nproc", miscellaneous::nproc);
-    util_funcs.add_func("printenv", miscellaneous::printenv);
-    util_funcs.add_func("pwd", filesystem::pwd);
-    util_funcs.add_func("sha512sum", crypto::sha512sum);
-    util_funcs.add_func("tail", io::tail);
-    util_funcs.add_func("true", miscellaneous::true_fn);
-    util_funcs.add_func("truncate", filesystem::truncate);
-    util_funcs.add_func("wc", io::wc);
-    util_funcs.add_func("yes", io::yes);
+    util_funcs.add_func(crypto::md5sum, "md5sum");
+    util_funcs.add_func(crypto::sha512sum, "sha512sum");
+    util_funcs.add_func(filesystem::ls, "dir");
+    util_funcs.add_func(filesystem::ls, "ls");
+    util_funcs.add_func(filesystem::pwd, "pwd");
+    util_funcs.add_func(filesystem::truncate, "truncate");
+    util_funcs.add_func(io::cat, "cat");
+    util_funcs.add_func(io::cp, "cp");
+    util_funcs.add_func(io::echo, "echo");
+    util_funcs.add_func(io::head, "head");
+    util_funcs.add_func(io::nl, "nl");
+    util_funcs.add_func(io::tail, "tail");
+    util_funcs.add_func(io::wc, "wc");
+    util_funcs.add_func(io::yes, "yes");
+    util_funcs.add_func(miscellaneous::false_fn, "false");
+    util_funcs.add_func(miscellaneous::hostid, "hostid");
+    util_funcs.add_func(miscellaneous::nproc, "nproc");
+    util_funcs.add_func(miscellaneous::printenv, "printenv");
+    util_funcs.add_func(miscellaneous::true_fn, "true");
 
     util_funcs.utils.get(util_name.as_str()).unwrap()();
 }
