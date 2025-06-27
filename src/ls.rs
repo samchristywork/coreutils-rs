@@ -289,3 +289,20 @@ fn days_to_ymd(days: u64) -> (i64, u64, u64) {
 fn is_leap(year: i64) -> bool {
     year % 4 == 0 && (year % 100 != 0 || year % 400 == 0)
 }
+
+fn human_size(bytes: u64) -> String {
+    const UNITS: &[&str] = &["B", "K", "M", "G", "T", "P"];
+    let mut size = bytes as f64;
+    let mut unit_idx = 0;
+    while size >= 1024.0 && unit_idx + 1 < UNITS.len() {
+        size /= 1024.0;
+        unit_idx += 1;
+    }
+    if unit_idx == 0 {
+        format!("{}", bytes)
+    } else if size < 10.0 {
+        format!("{:.1}{}", size, UNITS[unit_idx])
+    } else {
+        format!("{:.0}{}", size, UNITS[unit_idx])
+    }
+}
