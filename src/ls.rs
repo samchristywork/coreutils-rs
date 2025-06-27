@@ -255,3 +255,37 @@ fn format_time(secs: u64) -> String {
 
     format!("{} {:2} {:02}:{:02}", mon_str, day, hour, min)
 }
+
+fn days_to_ymd(days: u64) -> (i64, u64, u64) {
+    let mut remaining = days as i64;
+    let mut year = 1970i64;
+
+    loop {
+        let days_in_year = if is_leap(year) { 366 } else { 365 };
+        if remaining < days_in_year {
+            break;
+        }
+        remaining -= days_in_year;
+        year += 1;
+    }
+
+    let month_days: [i64; 12] = [
+        31, if is_leap(year) { 29 } else { 28 },
+        31, 30, 31, 30, 31, 31, 30, 31, 30, 31,
+    ];
+
+    let mut month = 1u64;
+    for &md in &month_days {
+        if remaining < md {
+            break;
+        }
+        remaining -= md;
+        month += 1;
+    }
+
+    (year, month, remaining as u64 + 1)
+}
+
+fn is_leap(year: i64) -> bool {
+    year % 4 == 0 && (year % 100 != 0 || year % 400 == 0)
+}
