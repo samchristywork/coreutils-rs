@@ -165,3 +165,36 @@ fn list_dir(
 
     0
 }
+
+fn print_long_entry(name: &str, meta: &fs::Metadata, human_readable: bool) {
+    let mode = meta.permissions().mode();
+    let nlink = meta.nlink();
+    let uid = meta.uid();
+    let gid = meta.gid();
+    let size = meta.len();
+    let size_str = if human_readable {
+        human_size(size)
+    } else {
+        size.to_string()
+    };
+    let mtime = meta
+        .modified()
+        .unwrap_or(UNIX_EPOCH)
+        .duration_since(UNIX_EPOCH)
+        .unwrap_or_default()
+        .as_secs();
+
+    let time_str = format_time(mtime);
+    let colored = colorize_name(name, meta);
+
+    println!(
+        "{} {:>3} {:>5} {:>5} {:>8} {} {}",
+        format_mode(mode),
+        nlink,
+        uid,
+        gid,
+        size_str,
+        time_str,
+        colored
+    );
+}
