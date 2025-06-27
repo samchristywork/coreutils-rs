@@ -94,3 +94,74 @@ pub fn run(args: &[String]) -> i32 {
 
     exit_code
 }
+
+fn list_dir(
+    dir: &Path,
+    show_all: bool,
+    long_format: bool,
+    human_readable: bool,
+    reverse: bool,
+    sort_by_time: bool,
+    one_per_line: bool,
+) -> i32 {
+    let entries = match fs::read_dir(dir) {
+        Ok(e) => e,
+        Err(e) => {
+            eprintln!("ls: cannot open directory '{}': {}", dir.display(), e);
+            return 1;
+        }
+    };
+
+    let mut items: Vec<(String, fs::Metadata)> = Vec::new();
+
+    if show_all {
+        if let Ok(meta) = dir.metadata() {
+            items.push((".".to_string(), meta));
+        }
+        let parent = dir.parent().unwrap_or(dir);
+        if let Ok(meta) = parent.metadata() {
+            items.push(("..".to_string(), meta));
+        }
+    }
+
+    for entry in entries.flatten() {
+        let name = entry.file_name().to_string_lossy().to_string();
+        if !show_all && name.starts_with('.') {
+            continue;
+        }
+        if let Ok(meta) = entry.metadata() {
+            items.push((name, meta));
+        }
+    }
+
+    if sort_by_time {
+        items.sort_by(|a, b| {
+            let ta = a.1.modified().unwrap_or(UNIX_EPOCH);
+            let tb = b.1.modified().unwrap_or(UNIX_EPOCH);
+            tb.cmp(&ta)
+        });
+    } else {
+        items.sort_by(|a, b| a.0.to_lowercase().cmp(&b.0.to_lowercase()));
+    }
+
+    if reverse {
+        items.reverse();
+    }
+
+    if long_format {
+        let total_blocks: u64 = items.iter().map(|(_, m)| m.blocks()).sum();
+        println!("total {}", total_blocks / 2);
+        for (name, meta) in &items {
+            print_long_entry(name, meta, human_readable);
+        }
+    } else if one_per_line {
+        for (name, meta) in &items {
+            println!("{}", colorize_name(name, meta));
+        }
+    } else {
+        let names: Vec<String> = items.iter().map(|(n, m)| colorize_name(n, m)).collect();
+        print_columns(&names);
+    }
+
+    0
+}
