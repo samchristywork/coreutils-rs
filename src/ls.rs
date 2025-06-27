@@ -198,3 +198,42 @@ fn print_long_entry(name: &str, meta: &fs::Metadata, human_readable: bool) {
         colored
     );
 }
+
+fn format_mode(mode: u32) -> String {
+    let file_type = match mode & 0o170000 {
+        0o040000 => 'd',
+        0o120000 => 'l',
+        0o060000 => 'b',
+        0o020000 => 'c',
+        0o010000 => 'p',
+        0o140000 => 's',
+        _ => '-',
+    };
+
+    let rwx = [
+        (0o400, 'r'), (0o200, 'w'), (0o100, 'x'),
+        (0o040, 'r'), (0o020, 'w'), (0o010, 'x'),
+        (0o004, 'r'), (0o002, 'w'), (0o001, 'x'),
+    ];
+
+    let mut s = String::with_capacity(10);
+    s.push(file_type);
+    for &(bit, ch) in &rwx {
+        s.push(if mode & bit != 0 { ch } else { '-' });
+    }
+
+    if mode & 0o4000 != 0 {
+        let c = if mode & 0o100 != 0 { 's' } else { 'S' };
+        s.replace_range(3..4, &c.to_string());
+    }
+    if mode & 0o2000 != 0 {
+        let c = if mode & 0o010 != 0 { 's' } else { 'S' };
+        s.replace_range(6..7, &c.to_string());
+    }
+    if mode & 0o1000 != 0 {
+        let c = if mode & 0o001 != 0 { 't' } else { 'T' };
+        s.replace_range(9..10, &c.to_string());
+    }
+
+    s
+}
