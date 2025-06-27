@@ -237,3 +237,21 @@ fn format_mode(mode: u32) -> String {
 
     s
 }
+
+fn format_time(secs: u64) -> String {
+    let minutes = secs / 60;
+    let hours = minutes / 60;
+    let days = hours / 24;
+
+    let (_, month, day) = days_to_ymd(days);
+    let hour = (hours % 24) as u32;
+    let min = (minutes % 60) as u32;
+
+    const MONTHS: [&str; 12] = [
+        "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+        "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
+    ];
+    let mon_str = MONTHS[month.saturating_sub(1) as usize];
+
+    format!("{} {:2} {:02}:{:02}", mon_str, day, hour, min)
+}
