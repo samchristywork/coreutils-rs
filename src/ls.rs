@@ -321,3 +321,34 @@ fn colorize_name(name: &str, meta: &fs::Metadata) -> String {
         name.to_string()
     }
 }
+
+fn terminal_width() -> usize {
+    if let Ok(cols) = std::env::var("COLUMNS") {
+        if let Ok(n) = cols.parse::<usize>() {
+            if n > 0 {
+                return n;
+            }
+        }
+    }
+
+    // Try TIOCGWINSZ ioctl
+    #[repr(C)]
+    struct Winsize {
+        ws_row: u16,
+        ws_col: u16,
+        _ws_xpixel: u16,
+        _ws_ypixel: u16,
+    }
+
+    extern "C" {
+        fn ioctl(fd: i32, request: u64, ...) -> i32;
+    }
+
+    let mut ws = Winsize { ws_row: 0, ws_col: 0, _ws_xpixel: 0, _ws_ypixel: 0 };
+    let ret = unsafe { ioctl(1, 0x5413u64, &mut ws) };
+    if ret == 0 && ws.ws_col > 0 {
+        return ws.ws_col as usize;
+    }
+
+    80
+}
