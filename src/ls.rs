@@ -306,3 +306,18 @@ fn human_size(bytes: u64) -> String {
         format!("{:.0}{}", size, UNITS[unit_idx])
     }
 }
+
+fn colorize_name(name: &str, meta: &fs::Metadata) -> String {
+    let mode = meta.permissions().mode();
+    let file_type = mode & 0o170000;
+
+    if file_type == 0o040000 {
+        format!("\x1b[1;34m{}\x1b[0m", name)
+    } else if file_type == 0o120000 {
+        format!("\x1b[0;36m{}\x1b[0m", name)
+    } else if mode & 0o111 != 0 {
+        format!("\x1b[1;32m{}\x1b[0m", name)
+    } else {
+        name.to_string()
+    }
+}
