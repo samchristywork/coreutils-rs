@@ -352,3 +352,36 @@ fn terminal_width() -> usize {
 
     80
 }
+
+fn print_columns(names: &[String]) {
+    if names.is_empty() {
+        return;
+    }
+
+    let plain_lens: Vec<usize> = names.iter().map(|n| strip_ansi_len(n)).collect();
+    let max_len = plain_lens.iter().max().copied().unwrap_or(0);
+    let col_width = max_len + 2;
+
+    let term_width = terminal_width();
+    let cols = (term_width / col_width).max(1);
+    let rows = (names.len() + cols - 1) / cols;
+
+    for row in 0..rows {
+        let mut line = String::new();
+        for col in 0..cols {
+            let idx = row + col * rows;
+            if idx >= names.len() {
+                break;
+            }
+            line.push_str(&names[idx]);
+            // Add padding unless this is the last column or last item
+            if col + 1 < cols && idx + rows < names.len() {
+                let padding = col_width - plain_lens[idx];
+                for _ in 0..padding {
+                    line.push(' ');
+                }
+            }
+        }
+        println!("{}", line);
+    }
+}
