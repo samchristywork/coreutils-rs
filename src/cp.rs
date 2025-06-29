@@ -87,3 +87,35 @@ pub fn run(args: &[String]) -> i32 {
 
     exit_code
 }
+
+fn copy_file(src: &Path, dest: &Path, preserve: bool, no_clobber: bool, verbose: bool, force: bool) -> i32 {
+    if dest.exists() {
+        if no_clobber {
+            return 0;
+        }
+        if force {
+            let _ = fs::remove_file(dest);
+        }
+    }
+
+    match fs::copy(src, dest) {
+        Ok(_) => {
+            if preserve {
+                if let Ok(src_meta) = src.metadata() {
+                    let _ = fs::set_permissions(dest, src_meta.permissions());
+                    if let Ok(dest_file) = fs::File::open(dest) {
+                        let _ = set_times(&dest_file, &src_meta);
+                    }
+                }
+            }
+            if verbose {
+                println!("'{}' -> '{}'", src.display(), dest.display());
+            }
+            0
+        }
+        Err(e) => {
+            eprintln!("cp: cannot copy '{}' to '{}': {}", src.display(), dest.display(), e);
+            1
+        }
+    }
+}
