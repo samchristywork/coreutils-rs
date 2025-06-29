@@ -385,3 +385,20 @@ fn print_columns(names: &[String]) {
         println!("{}", line);
     }
 }
+
+fn strip_ansi_len(s: &str) -> usize {
+    let mut len = 0;
+    let mut in_escape = false;
+    for ch in s.chars() {
+        if in_escape {
+            if ch == 'm' {
+                in_escape = false;
+            }
+        } else if ch == '\x1b' {
+            in_escape = true;
+        } else {
+            len += 1;
+        }
+    }
+    len
+}
