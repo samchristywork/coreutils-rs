@@ -119,3 +119,42 @@ fn copy_file(src: &Path, dest: &Path, preserve: bool, no_clobber: bool, verbose:
         }
     }
 }
+
+fn copy_dir(src: &Path, dest: &Path, preserve: bool, no_clobber: bool, verbose: bool, force: bool) -> i32 {
+    if let Err(e) = fs::create_dir_all(dest) {
+        eprintln!("cp: cannot create directory '{}': {}", dest.display(), e);
+        return 1;
+    }
+
+    if preserve {
+        if let Ok(src_meta) = src.metadata() {
+            let _ = fs::set_permissions(dest, src_meta.permissions());
+        }
+    }
+
+    if verbose {
+        println!("'{}' -> '{}'", src.display(), dest.display());
+    }
+
+    let entries = match fs::read_dir(src) {
+        Ok(e) => e,
+        Err(e) => {
+            eprintln!("cp: cannot read directory '{}': {}", src.display(), e);
+            return 1;
+        }
+    };
+
+    let mut exit_code = 0;
+    for entry in entries.flatten() {
+        let src_child = entry.path();
+        let dest_child = dest.join(entry.file_name());
+
+        if src_child.is_dir() {
+            exit_code |= copy_dir(&src_child, &dest_child, preserve, no_clobber, verbose, force);
+        } else {
+            exit_code |= copy_file(&src_child, &dest_child, preserve, no_clobber, verbose, force);
+        }
+    }
+
+    exit_code
+}
