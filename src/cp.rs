@@ -158,3 +158,39 @@ fn copy_dir(src: &Path, dest: &Path, preserve: bool, no_clobber: bool, verbose: 
 
     exit_code
 }
+
+#[cfg(target_os = "linux")]
+fn set_times(file: &fs::File, meta: &fs::Metadata) -> io::Result<()> {
+    use std::os::unix::io::AsRawFd;
+    use std::time::UNIX_EPOCH;
+
+    let atime = meta.accessed()?.duration_since(UNIX_EPOCH).unwrap_or_default();
+    let mtime = meta.modified()?.duration_since(UNIX_EPOCH).unwrap_or_default();
+
+    #[repr(C)]
+    struct Timespec {
+        tv_sec: i64,
+        tv_nsec: i64,
+    }
+
+    extern "C" {
+        fn futimens(fd: i32, times: *const Timespec) -> i32;
+    }
+
+    let times = [
+        Timespec { tv_sec: atime.as_secs() as i64, tv_nsec: atime.subsec_nanos() as i64 },
+        Timespec { tv_sec: mtime.as_secs() as i64, tv_nsec: mtime.subsec_nanos() as i64 },
+    ];
+
+    let ret = unsafe { futimens(file.as_raw_fd(), times.as_ptr()) };
+    if ret != 0 {
+        Err(io::Error::last_os_error())
+    } else {
+        Ok(())
+    }
+}
+
+#[cfg(not(target_os = "linux"))]
+fn set_times(_file: &fs::File, _meta: &fs::Metadata) -> io::Result<()> {
+    Ok(())
+}
