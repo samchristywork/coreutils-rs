@@ -108,3 +108,54 @@ pub fn run(args: &[String]) -> i32 {
 
     exit_code
 }
+
+fn is_cross_device(e: &std::io::Error) -> bool {
+    e.raw_os_error() == Some(18) // EXDEV
+}
+
+fn copy_then_remove_file(src: &Path, dest: &Path) -> i32 {
+    if let Err(e) = fs::copy(src, dest) {
+        eprintln!("mv: cannot copy '{}' to '{}': {}", src.display(), dest.display(), e);
+        return 1;
+    }
+    if let Err(e) = fs::remove_file(src) {
+        eprintln!("mv: cannot remove '{}': {}", src.display(), e);
+        return 1;
+    }
+    0
+}
+
+fn copy_dir_recursive(src: &Path, dest: &Path) -> i32 {
+    if let Err(e) = fs::create_dir_all(dest) {
+        eprintln!("mv: cannot create directory '{}': {}", dest.display(), e);
+        return 1;
+    }
+
+    let entries = match fs::read_dir(src) {
+        Ok(e) => e,
+        Err(e) => {
+            eprintln!("mv: cannot read directory '{}': {}", src.display(), e);
+            return 1;
+        }
+    };
+
+    let mut exit_code = 0;
+    for entry in entries.flatten() {
+        let src_child = entry.path();
+        let dest_child = dest.join(entry.file_name());
+        if src_child.is_dir() {
+            exit_code |= copy_dir_recursive(&src_child, &dest_child);
+        } else {
+            exit_code |= copy_then_remove_file(&src_child, &dest_child);
+        }
+    }
+
+    if exit_code == 0 {
+        if let Err(e) = fs::remove_dir(src) {
+            eprintln!("mv: cannot remove directory '{}': {}", src.display(), e);
+            exit_code = 1;
+        }
+    }
+
+    exit_code
+}
