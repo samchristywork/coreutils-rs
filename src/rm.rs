@@ -67,3 +67,20 @@ pub fn run(args: &[String]) -> i32 {
 
     exit_code
 }
+
+fn remove_file(p: &Path, force: bool, verbose: bool) -> i32 {
+    match fs::remove_file(p) {
+        Ok(()) => {
+            if verbose {
+                println!("removed '{}'", p.display());
+            }
+            0
+        }
+        Err(e) => {
+            if !force {
+                eprintln!("rm: cannot remove '{}': {}", p.display(), e);
+            }
+            if force { 0 } else { 1 }
+        }
+    }
+}
