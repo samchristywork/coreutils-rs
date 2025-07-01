@@ -84,3 +84,44 @@ fn remove_file(p: &Path, force: bool, verbose: bool) -> i32 {
         }
     }
 }
+
+fn remove_dir(p: &Path, force: bool, verbose: bool) -> i32 {
+    let entries = match fs::read_dir(p) {
+        Ok(e) => e,
+        Err(e) => {
+            if !force {
+                eprintln!("rm: cannot read directory '{}': {}", p.display(), e);
+            }
+            return if force { 0 } else { 1 };
+        }
+    };
+
+    let mut exit_code = 0;
+    for entry in entries.flatten() {
+        let child = entry.path();
+        if child.is_dir() {
+            exit_code |= remove_dir(&child, force, verbose);
+        } else {
+            exit_code |= remove_file(&child, force, verbose);
+        }
+    }
+
+    if exit_code != 0 {
+        return exit_code;
+    }
+
+    match fs::remove_dir(p) {
+        Ok(()) => {
+            if verbose {
+                println!("removed directory '{}'", p.display());
+            }
+            0
+        }
+        Err(e) => {
+            if !force {
+                eprintln!("rm: cannot remove directory '{}': {}", p.display(), e);
+            }
+            if force { 0 } else { 1 }
+        }
+    }
+}
