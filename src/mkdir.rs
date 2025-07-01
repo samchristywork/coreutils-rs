@@ -91,3 +91,53 @@ pub fn run(args: &[String]) -> i32 {
 
     exit_code
 }
+
+fn make_dir(p: &Path, parents: bool, verbose: bool, mode: Option<u32>) -> i32 {
+    if parents {
+        // With -p, create intermediate dirs and don't error if already exists
+        match fs::create_dir_all(p) {
+            Ok(()) => {}
+            Err(e) => {
+                eprintln!("mkdir: cannot create directory '{}': {}", p.display(), e);
+                return 1;
+            }
+        }
+        if verbose {
+            // Print each component that was created
+            println!("mkdir: created directory '{}'", p.display());
+        }
+    } else {
+        match fs::create_dir(p) {
+            Ok(()) => {
+                if verbose {
+                    println!("mkdir: created directory '{}'", p.display());
+                }
+            }
+            Err(e) => {
+                eprintln!("mkdir: cannot create directory '{}': {}", p.display(), e);
+                return 1;
+            }
+        }
+    }
+
+    if let Some(m) = mode {
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            let perms = fs::Permissions::from_mode(m);
+            if let Err(e) = fs::set_permissions(p, perms) {
+                eprintln!("mkdir: cannot set permissions on '{}': {}", p.display(), e);
+                return 1;
+            }
+        }
+    }
+
+    0
+}
+
+fn parse_mode(s: &str) -> Option<u32> {
+    // Accept octal (e.g. 755, 0755) or symbolic modes are not supported
+    let s = s.trim_start_matches('0');
+    let s = if s.is_empty() { "0" } else { s };
+    u32::from_str_radix(s, 8).ok()
+}
