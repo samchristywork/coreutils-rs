@@ -203,3 +203,15 @@ fn cat_reader<R: Read, W: Write>(
 
     0
 }
+
+fn replace_tabs(line: &[u8]) -> Vec<u8> {
+    let mut out = Vec::with_capacity(line.len());
+    for &b in line {
+        if b == b'\t' {
+            out.extend_from_slice(b"^I");
+        } else {
+            out.push(b);
+        }
+    }
+    out
+}
