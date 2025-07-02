@@ -105,3 +105,101 @@ pub fn run(args: &[String]) -> i32 {
 
     exit_code
 }
+
+fn cat_reader<R: Read, W: Write>(
+    reader: &mut R,
+    out: &mut W,
+    number_lines: bool,
+    number_nonblank: bool,
+    show_ends: bool,
+    show_tabs: bool,
+    squeeze_blank: bool,
+    line_num: &mut usize,
+) -> i32 {
+    let plain = !number_lines && !number_nonblank && !show_ends && !show_tabs && !squeeze_blank;
+
+    if plain {
+        // Fast path: stream bytes directly
+        let mut buf = [0u8; 65536];
+        loop {
+            match reader.read(&mut buf) {
+                Ok(0) => break,
+                Ok(n) => {
+                    if out.write_all(&buf[..n]).is_err() {
+                        return 1;
+                    }
+                }
+                Err(e) if e.kind() == io::ErrorKind::Interrupted => continue,
+                Err(_) => return 1,
+            }
+        }
+        return 0;
+    }
+
+    let mut prev_blank = false;
+    let mut buf_reader = BufReader::new(reader);
+    let mut line = Vec::new();
+
+    loop {
+        line.clear();
+        match buf_reader.read_until(b'\n', &mut line) {
+            Ok(0) => break,
+            Ok(_) => {}
+            Err(_) => return 1,
+        }
+
+        let has_newline = line.last() == Some(&b'\n');
+        if has_newline {
+            line.pop();
+        }
+
+        let is_blank = line.is_empty();
+
+        if squeeze_blank {
+            if is_blank {
+                if prev_blank {
+                    continue;
+                }
+                prev_blank = true;
+            } else {
+                prev_blank = false;
+            }
+        }
+
+        if number_lines {
+            if write!(out, "{:6}\t", line_num).is_err() {
+                return 1;
+            }
+            *line_num += 1;
+        } else if number_nonblank && !is_blank {
+            if write!(out, "{:6}\t", line_num).is_err() {
+                return 1;
+            }
+            *line_num += 1;
+        }
+
+        let content = if show_tabs {
+            replace_tabs(&line)
+        } else {
+            line.clone()
+        };
+
+        if out.write_all(&content).is_err() {
+            return 1;
+        }
+
+        if show_ends {
+            if out.write_all(b"$").is_err() {
+                return 1;
+            }
+        }
+
+        if has_newline {
+            if out.write_all(b"\n").is_err() {
+                return 1;
+            }
+        }
+    }
+
+    0
+}
