@@ -265,3 +265,39 @@ impl<'a> Pager<'a> {
         self.term.tty.flush().ok();
     }
 }
+
+fn truncate_str(s: &str, max_cols: usize) -> &str {
+    if max_cols == 0 {
+        return "";
+    }
+    let mut width = 0;
+    let mut end = s.len();
+    for (i, _) in s.char_indices() {
+        if width >= max_cols {
+            end = i;
+            break;
+        }
+        width += 1;
+    }
+    &s[..end]
+}
+
+fn highlight_matches(line: &str, pat: &str) -> String {
+    let lower = line.to_lowercase();
+    let lower_pat = pat.to_lowercase();
+    let mut result = String::new();
+    let mut pos = 0;
+    while let Some(idx) = lower[pos..].find(&lower_pat) {
+        let abs = pos + idx;
+        result.push_str(&line[pos..abs]);
+        result.push_str("\x1b[1;31m");
+        result.push_str(&line[abs..abs + pat.len()]);
+        result.push_str("\x1b[0m");
+        pos = abs + pat.len();
+        if pat.is_empty() {
+            break;
+        }
+    }
+    result.push_str(&line[pos..]);
+    result
+}
