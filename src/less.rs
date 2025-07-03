@@ -207,5 +207,61 @@ impl<'a> Pager<'a> {
     }
 
     fn draw(&mut self) {
+        let (rows, cols) = self.term.size();
+        let view_rows = rows.saturating_sub(1);
+
+        let mut out = String::new();
+        out.push_str("\x1b[H");
+
+        let num_width = if self.show_line_numbers {
+            format!("{}", self.lines.len()).len() + 1
+        } else {
+            0
+        };
+
+        for i in 0..view_rows {
+            let line_idx = self.top + i;
+            out.push_str("\x1b[2K");
+
+            if line_idx < self.lines.len() {
+                if self.show_line_numbers {
+                    let num = format!("{:>width$} ", line_idx + 1, width = num_width - 1);
+                    out.push_str("\x1b[33m");
+                    out.push_str(&num);
+                    out.push_str("\x1b[0m");
+                }
+
+                let line = self.lines[line_idx];
+                let display_width = cols.saturating_sub(num_width);
+                let truncated = truncate_str(line, display_width);
+
+                if !self.search.is_empty() {
+                    out.push_str(&highlight_matches(truncated, &self.search));
+                } else {
+                    out.push_str(truncated);
+                }
+            }
+
+            out.push_str("\r\n");
+        }
+
+        out.push_str("\x1b[7m\x1b[2K");
+        let total = self.lines.len();
+        let bottom = (self.top + view_rows).min(total);
+        let pct = if total == 0 { 100 } else { bottom * 100 / total };
+        let status = if self.search.is_empty() {
+            format!(" lines {}-{}/{} ({}%)", self.top + 1, bottom, total, pct)
+        } else {
+            format!(
+                " lines {}-{}/{} ({}%)  /{} ({} matches)",
+                self.top + 1, bottom, total, pct,
+                self.search, self.search_matches.len()
+            )
+        };
+        out.push_str(truncate_str(&status, cols));
+        out.push_str("\x1b[0m");
+
+        write!(self.term.tty, "{}", out).ok();
+        self.term.tty.flush().ok();
     }
 }
