@@ -85,3 +85,59 @@ pub fn run(args: &[String]) -> i32 {
 
     exit_code
 }
+
+#[derive(Default)]
+struct Counts {
+    lines: u64,
+    words: u64,
+    bytes: u64,
+    chars: u64,
+    max_line: u64,
+}
+
+fn count_reader<R: BufRead>(reader: &mut R) -> Counts {
+    let mut counts = Counts::default();
+    let mut line = String::new();
+
+    loop {
+        line.clear();
+        match reader.read_line(&mut line) {
+            Ok(0) => break,
+            Ok(n) => {
+                counts.bytes += n as u64;
+                counts.chars += line.chars().count() as u64;
+                counts.lines += 1;
+                counts.words += line.split_whitespace().count() as u64;
+                let line_len = line.trim_end_matches('\n').trim_end_matches('\r').chars().count() as u64;
+                counts.max_line = counts.max_line.max(line_len);
+            }
+            Err(_) => break,
+        }
+    }
+
+    counts
+}
+
+fn print_counts<W: io::Write>(
+    counts: &Counts,
+    label: &str,
+    lines: bool,
+    words: bool,
+    bytes: bool,
+    chars: bool,
+    max_line: bool,
+    out: &mut W,
+) {
+    let mut parts: Vec<String> = Vec::new();
+    if lines     { parts.push(format!("{:>7}", counts.lines)); }
+    if words     { parts.push(format!("{:>7}", counts.words)); }
+    if bytes     { parts.push(format!("{:>7}", counts.bytes)); }
+    if chars     { parts.push(format!("{:>7}", counts.chars)); }
+    if max_line  { parts.push(format!("{:>7}", counts.max_line)); }
+
+    if label.is_empty() {
+        let _ = writeln!(out, "{}", parts.join(""));
+    } else {
+        let _ = writeln!(out, "{} {}", parts.join(""), label);
+    }
+}
