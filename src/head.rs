@@ -161,3 +161,50 @@ pub fn run(args: &[String]) -> i32 {
 
     exit_code
 }
+
+fn head_reader<R: BufRead, W: Write>(
+    reader: &mut R,
+    out: &mut W,
+    n_lines: usize,
+    bytes: Option<usize>,
+) -> i32 {
+    if let Some(n_bytes) = bytes {
+        let mut buf = vec![0u8; n_bytes];
+        let mut total = 0;
+        loop {
+            if total >= n_bytes {
+                break;
+            }
+            match reader.read(&mut buf[total..]) {
+                Ok(0) => break,
+                Ok(n) => total += n,
+                Err(e) if e.kind() == io::ErrorKind::Interrupted => continue,
+                Err(_) => return 1,
+            }
+        }
+        if out.write_all(&buf[..total]).is_err() {
+            return 1;
+        }
+        return 0;
+    }
+
+    let mut line = String::new();
+    for _ in 0..n_lines {
+        line.clear();
+        match reader.read_line(&mut line) {
+            Ok(0) => break,
+            Ok(_) => {
+                if out.write_all(line.as_bytes()).is_err() {
+                    return 1;
+                }
+            }
+            Err(_) => return 1,
+        }
+    }
+
+    0
+}
+
+fn parse_count(s: &str) -> Option<usize> {
+    s.parse::<usize>().ok()
+}
