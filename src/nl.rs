@@ -155,3 +155,84 @@ pub fn run(args: &[String]) -> i32 {
 
     exit_code
 }
+
+struct Opts {
+    body_style: Style,
+    header_style: Style,
+    footer_style: Style,
+    width: usize,
+    separator: String,
+    increment: i64,
+}
+
+#[derive(Clone, Copy)]
+enum Style {
+    All,
+    NonEmpty,
+    None,
+}
+
+fn number_lines<R: BufRead, W: Write>(
+    reader: &mut R,
+    out: &mut W,
+    opts: &Opts,
+    line_num: &mut i64,
+) -> i32 {
+    // Logical sections: header (\\::\\::\\:), body (\\:), footer (\\:\\:)
+    // For simplicity we treat everything as body unless a section delimiter is seen.
+    let mut section = Section::Body;
+    let mut line = String::new();
+
+    loop {
+        line.clear();
+        match reader.read_line(&mut line) {
+            Ok(0) => break,
+            Ok(_) => {}
+            Err(_) => return 1,
+        }
+
+        let content = line.trim_end_matches('\n').trim_end_matches('\r');
+
+        // Check for section delimiters
+        if content == "\\:\\:\\:" {
+            section = Section::Header;
+            let _ = writeln!(out);
+            continue;
+        } else if content == "\\:" {
+            section = Section::Body;
+            let _ = writeln!(out);
+            continue;
+        } else if content == "\\:\\:" {
+            section = Section::Footer;
+            let _ = writeln!(out);
+            continue;
+        }
+
+        let style = match section {
+            Section::Header => opts.header_style,
+            Section::Body => opts.body_style,
+            Section::Footer => opts.footer_style,
+        };
+
+        let should_number = match style {
+            Style::All => true,
+            Style::NonEmpty => !content.is_empty(),
+            Style::None => false,
+        };
+
+        if should_number {
+            if write!(out, "{:>width$}{}{}\n",
+                line_num, opts.separator, content,
+                width = opts.width).is_err() {
+                return 1;
+            }
+            *line_num += opts.increment;
+        } else {
+            if write!(out, "{}{}\n", " ".repeat(opts.width + opts.separator.len()), content).is_err() {
+                return 1;
+            }
+        }
+    }
+
+    0
+}
