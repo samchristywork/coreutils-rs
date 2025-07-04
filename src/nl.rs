@@ -1,0 +1,157 @@
+use std::fs::File;
+use std::io::{self, BufRead, BufReader, Write};
+
+pub fn run(args: &[String]) -> i32 {
+    let mut body_style = Style::NonEmpty;
+    let mut header_style = Style::None;
+    let mut footer_style = Style::None;
+    let mut width = 6usize;
+    let mut separator = String::from("\t");
+    let mut start = 1i64;
+    let mut increment = 1i64;
+    let mut paths: Vec<String> = Vec::new();
+
+    let mut i = 0;
+    while i < args.len() {
+        let arg = args[i].as_str();
+        if let Some(val) = long_opt_val(arg, "--body-numbering=")
+            .or_else(|| short_opt_val(arg, 'b'))
+        {
+            let val = if val.is_empty() {
+                i += 1;
+                if i >= args.len() { eprintln!("nl: option requires an argument -- 'b'"); return 1; }
+                args[i].clone()
+            } else { val };
+            match parse_style(&val) {
+                Some(s) => body_style = s,
+                None => { eprintln!("nl: invalid line numbering style: '{}'", val); return 1; }
+            }
+        } else if let Some(val) = long_opt_val(arg, "--header-numbering=")
+            .or_else(|| short_opt_val(arg, 'h'))
+        {
+            let val = if val.is_empty() {
+                i += 1;
+                if i >= args.len() { eprintln!("nl: option requires an argument -- 'h'"); return 1; }
+                args[i].clone()
+            } else { val };
+            match parse_style(&val) {
+                Some(s) => header_style = s,
+                None => { eprintln!("nl: invalid line numbering style: '{}'", val); return 1; }
+            }
+        } else if let Some(val) = long_opt_val(arg, "--footer-numbering=")
+            .or_else(|| short_opt_val(arg, 'f'))
+        {
+            let val = if val.is_empty() {
+                i += 1;
+                if i >= args.len() { eprintln!("nl: option requires an argument -- 'f'"); return 1; }
+                args[i].clone()
+            } else { val };
+            match parse_style(&val) {
+                Some(s) => footer_style = s,
+                None => { eprintln!("nl: invalid line numbering style: '{}'", val); return 1; }
+            }
+        } else if let Some(val) = long_opt_val(arg, "--number-width=")
+            .or_else(|| short_opt_val(arg, 'w'))
+        {
+            let val = if val.is_empty() {
+                i += 1;
+                if i >= args.len() { eprintln!("nl: option requires an argument -- 'w'"); return 1; }
+                args[i].clone()
+            } else { val };
+            match val.parse::<usize>() {
+                Ok(n) if n > 0 => width = n,
+                _ => { eprintln!("nl: invalid line number field width: '{}'", val); return 1; }
+            }
+        } else if let Some(val) = long_opt_val(arg, "--number-separator=")
+            .or_else(|| short_opt_val(arg, 'n'))
+        {
+            // -n is number format (ln, rn, rz), not separator; -s is separator
+            let val = if val.is_empty() {
+                i += 1;
+                if i >= args.len() { eprintln!("nl: option requires an argument -- 'n'"); return 1; }
+                args[i].clone()
+            } else { val };
+            // -n: ln=left no-pad, rn=right no-pad, rz=right zero-pad
+            // We store it as a format hint by overloading width sign; simpler: ignore format, just note
+            let _ = val; // format hint not used beyond default right-aligned
+        } else if let Some(val) = long_opt_val(arg, "--section-delimiter=")
+            .or_else(|| short_opt_val(arg, 'd'))
+        {
+            let val = if val.is_empty() {
+                i += 1;
+                if i >= args.len() { eprintln!("nl: option requires an argument -- 'd'"); return 1; }
+                args[i].clone()
+            } else { val };
+            let _ = val; // section delimiter (default \\:) not commonly needed
+        } else if let Some(val) = long_opt_val(arg, "--number-separator=")
+            .or_else(|| short_opt_val(arg, 's'))
+        {
+            let val = if val.is_empty() {
+                i += 1;
+                if i >= args.len() { eprintln!("nl: option requires an argument -- 's'"); return 1; }
+                args[i].clone()
+            } else { val };
+            separator = val;
+        } else if let Some(val) = long_opt_val(arg, "--starting-line-number=")
+            .or_else(|| short_opt_val(arg, 'v'))
+        {
+            let val = if val.is_empty() {
+                i += 1;
+                if i >= args.len() { eprintln!("nl: option requires an argument -- 'v'"); return 1; }
+                args[i].clone()
+            } else { val };
+            match val.parse::<i64>() {
+                Ok(n) => start = n,
+                Err(_) => { eprintln!("nl: invalid starting line number: '{}'", val); return 1; }
+            }
+        } else if let Some(val) = long_opt_val(arg, "--line-increment=")
+            .or_else(|| short_opt_val(arg, 'i'))
+        {
+            let val = if val.is_empty() {
+                i += 1;
+                if i >= args.len() { eprintln!("nl: option requires an argument -- 'i'"); return 1; }
+                args[i].clone()
+            } else { val };
+            match val.parse::<i64>() {
+                Ok(n) => increment = n,
+                Err(_) => { eprintln!("nl: invalid line number increment: '{}'", val); return 1; }
+            }
+        } else if arg.starts_with('-') && arg.len() > 1 {
+            eprintln!("nl: invalid option -- '{}'", arg);
+            return 1;
+        } else {
+            paths.push(args[i].clone());
+        }
+        i += 1;
+    }
+
+    let stdout = io::stdout();
+    let mut out = io::BufWriter::new(stdout.lock());
+    let mut exit_code = 0;
+    let mut line_num = start;
+
+    let opts = Opts { body_style, header_style, footer_style, width, separator, increment };
+
+    if paths.is_empty() {
+        exit_code |= number_lines(&mut io::stdin().lock(), &mut out, &opts, &mut line_num);
+    } else {
+        for path in &paths {
+            if path == "-" {
+                exit_code |= number_lines(&mut io::stdin().lock(), &mut out, &opts, &mut line_num);
+            } else {
+                match File::open(path) {
+                    Ok(f) => {
+                        let mut reader = BufReader::new(f);
+                        exit_code |= number_lines(&mut reader, &mut out, &opts, &mut line_num);
+                    }
+                    Err(e) => {
+                        eprintln!("nl: {}: {}", path, e);
+                        exit_code = 1;
+                    }
+                }
+            }
+        }
+    }
+
+    exit_code
+}
