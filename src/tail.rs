@@ -173,3 +173,47 @@ pub fn run(args: &[String]) -> i32 {
 
     exit_code
 }
+
+fn tail_reader<R: BufRead, W: Write>(
+    reader: &mut R,
+    out: &mut W,
+    n_lines: usize,
+    bytes: Option<usize>,
+) -> i32 {
+    if let Some(n_bytes) = bytes {
+        let mut buf = Vec::new();
+        if reader.read_to_end(&mut buf).is_err() {
+            return 1;
+        }
+        let start = buf.len().saturating_sub(n_bytes);
+        if out.write_all(&buf[start..]).is_err() {
+            return 1;
+        }
+        return 0;
+    }
+
+    // Collect into a ring buffer of the last n_lines lines
+    let mut ring: Vec<String> = Vec::with_capacity(n_lines + 1);
+    let mut line = String::new();
+    loop {
+        line.clear();
+        match reader.read_line(&mut line) {
+            Ok(0) => break,
+            Ok(_) => {
+                if ring.len() == n_lines {
+                    ring.remove(0);
+                }
+                ring.push(line.clone());
+            }
+            Err(_) => return 1,
+        }
+    }
+
+    for l in &ring {
+        if out.write_all(l.as_bytes()).is_err() {
+            return 1;
+        }
+    }
+
+    0
+}
