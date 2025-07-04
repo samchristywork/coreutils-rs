@@ -217,3 +217,40 @@ fn tail_reader<R: BufRead, W: Write>(
 
     0
 }
+
+fn follow_files<W: Write>(paths: &[String], _n_lines: usize, out: &mut W) -> i32 {
+    // Track file sizes; poll for changes every 100ms
+    let mut sizes: Vec<u64> = paths
+        .iter()
+        .map(|p| {
+            Path::new(p)
+                .metadata()
+                .map(|m| m.len())
+                .unwrap_or(0)
+        })
+        .collect();
+
+    loop {
+        std::thread::sleep(Duration::from_millis(100));
+
+        for (i, path) in paths.iter().enumerate() {
+            let meta = match Path::new(path).metadata() {
+                Ok(m) => m,
+                Err(_) => continue,
+            };
+            let new_size = meta.len();
+            if new_size > sizes[i] {
+                if let Ok(mut f) = File::open(path) {
+                    if f.seek(SeekFrom::Start(sizes[i])).is_ok() {
+                        let mut buf = Vec::new();
+                        if f.read_to_end(&mut buf).is_ok() {
+                            let _ = out.write_all(&buf);
+                            let _ = out.flush();
+                        }
+                    }
+                }
+                sizes[i] = new_size;
+            }
+        }
+    }
+}
