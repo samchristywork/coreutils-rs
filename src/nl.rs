@@ -236,3 +236,28 @@ fn number_lines<R: BufRead, W: Write>(
 
     0
 }
+
+enum Section { Header, Body, Footer }
+
+fn parse_style(s: &str) -> Option<Style> {
+    match s {
+        "a" => Some(Style::All),
+        "t" => Some(Style::NonEmpty),
+        "n" => Some(Style::None),
+        _ => None,
+    }
+}
+
+fn long_opt_val<'a>(arg: &'a str, prefix: &str) -> Option<String> {
+    arg.strip_prefix(prefix).map(|s| s.to_string())
+}
+
+fn short_opt_val(arg: &str, flag: char) -> Option<String> {
+    let s = arg.strip_prefix('-')?;
+    let mut chars = s.chars();
+    if chars.next() == Some(flag) {
+        Some(chars.collect())
+    } else {
+        None
+    }
+}
