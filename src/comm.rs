@@ -119,3 +119,19 @@ pub fn run(args: &[String]) -> i32 {
 
     0
 }
+
+fn read_line(reader: &mut Box<dyn BufRead>, line: &mut String) -> bool {
+    line.clear();
+    matches!(reader.read_line(line), Ok(n) if n > 0)
+}
+
+fn open(path: &str) -> Option<Box<dyn BufRead>> {
+    if path == "-" {
+        Some(Box::new(io::stdin().lock()))
+    } else {
+        match File::open(path) {
+            Ok(f) => Some(Box::new(BufReader::new(f))),
+            Err(e) => { eprintln!("comm: {}: {}", path, e); None }
+        }
+    }
+}
