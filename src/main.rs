@@ -1,6 +1,15 @@
 mod cp;
 mod ls;
+mod cat;
+mod head;
+mod nl;
+mod tail;
+mod wc;
+mod less;
 mod mkdir;
+mod more;
+mod term;
+mod tac;
 mod mv;
 mod rm;
 mod rmdir;
@@ -26,12 +35,22 @@ fn main() {
     };
 
     let code = match cmd.as_str() {
+        // File and Directory Operations
+        "ls" => ls::run(cmd_args),
         "cp" => cp::run(cmd_args),
-        "mkdir" => mkdir::run(cmd_args),
         "mv" => mv::run(cmd_args),
         "rm" => rm::run(cmd_args),
+        "mkdir" => mkdir::run(cmd_args),
         "rmdir" => rmdir::run(cmd_args),
-        "ls" => ls::run(cmd_args),
+        // File Viewing and Text Utilities
+        "cat" => cat::run(cmd_args),
+        "tac" => tac::run(cmd_args),
+        "less" => less::run(cmd_args),
+        "more" => more::run(cmd_args),
+        "head" => head::run(cmd_args),
+        "tail" => tail::run(cmd_args),
+        "nl" => nl::run(cmd_args),
+        "wc" => wc::run(cmd_args),
         _ => {
             eprintln!("coreutils-rs: '{}' is not a supported command", cmd);
             1
