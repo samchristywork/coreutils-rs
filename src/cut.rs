@@ -182,3 +182,16 @@ fn cut_reader<R: BufRead, W: Write>(
     }
     0
 }
+
+fn select_indices<T: Clone>(items: &[T], ranges: &[Range]) -> Vec<T> {
+    let mut out = Vec::new();
+    let len = items.len();
+    for range in ranges {
+        let start = range.start.unwrap_or(1).saturating_sub(1);
+        let end = range.end.unwrap_or(len).min(len);
+        for i in start..end {
+            out.push(items[i].clone());
+        }
+    }
+    out
+}
