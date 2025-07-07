@@ -195,3 +195,29 @@ fn select_indices<T: Clone>(items: &[T], ranges: &[Range]) -> Vec<T> {
     }
     out
 }
+
+struct Range {
+    start: Option<usize>,
+    end: Option<usize>,
+}
+
+fn parse_ranges(s: &str) -> Option<Vec<Range>> {
+    let mut ranges = Vec::new();
+    for part in s.split(',') {
+        let range = if let Some((a, b)) = part.split_once('-') {
+            let start = if a.is_empty() { None } else { Some(a.parse::<usize>().ok()?) };
+            let end = if b.is_empty() { None } else { Some(b.parse::<usize>().ok()?) };
+            if let (Some(s), Some(e)) = (start, end) {
+                if s > e { return None; }
+            }
+            Range { start, end }
+        } else {
+            let n = part.parse::<usize>().ok()?;
+            Range { start: Some(n), end: Some(n) }
+        };
+        if range.start == Some(0) { return None; }
+        ranges.push(range);
+    }
+    if ranges.is_empty() { return None; }
+    Some(ranges)
+}
