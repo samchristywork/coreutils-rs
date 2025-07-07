@@ -137,3 +137,48 @@ pub fn run(args: &[String]) -> i32 {
 
     exit_code
 }
+
+fn cut_reader<R: BufRead, W: Write>(
+    reader: &mut R,
+    out: &mut W,
+    fields: &Option<Vec<Range>>,
+    bytes: &Option<Vec<Range>>,
+    chars: &Option<Vec<Range>>,
+    delimiter: u8,
+    only_delimited: bool,
+) -> i32 {
+    let mut line = String::new();
+    loop {
+        line.clear();
+        match reader.read_line(&mut line) {
+            Ok(0) => break,
+            Ok(_) => {}
+            Err(_) => return 1,
+        }
+        let content = line.trim_end_matches('\n').trim_end_matches('\r');
+
+        if let Some(ranges) = fields {
+            let has_delim = content.as_bytes().contains(&delimiter);
+            if !has_delim {
+                if !only_delimited {
+                    let _ = writeln!(out, "{}", content);
+                }
+                continue;
+            }
+            let parts: Vec<&str> = content.split(delimiter as char).collect();
+            let selected: Vec<&str> = select_indices(&parts, ranges);
+            let _ = writeln!(out, "{}", selected.join(&(delimiter as char).to_string()));
+        } else if let Some(ranges) = bytes {
+            let b = content.as_bytes();
+            let selected: Vec<u8> = select_indices(&b.iter().copied().collect::<Vec<u8>>(), ranges);
+            let _ = out.write_all(&selected);
+            let _ = writeln!(out);
+        } else if let Some(ranges) = chars {
+            let ch_vec: Vec<char> = content.chars().collect();
+            let selected: Vec<char> = select_indices(&ch_vec, ranges);
+            let s: String = selected.into_iter().collect();
+            let _ = writeln!(out, "{}", s);
+        }
+    }
+    0
+}
