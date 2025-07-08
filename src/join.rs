@@ -237,3 +237,67 @@ fn get_field(line: &str, field: usize, sep: char, whitespace: bool) -> String {
     let fields = split_line(line, sep, whitespace);
     fields.get(field.saturating_sub(1)).unwrap_or(&"").to_string()
 }
+
+fn emit_joined<W: Write>(
+    l1: &str, l2: &str, key: &str,
+    f1: usize, f2: usize,
+    sep: char, whitespace: bool,
+    output_fields: &Option<Vec<(usize, usize)>>,
+    fill: &str,
+    out: &mut W,
+) {
+    let fields1 = split_line(l1, sep, whitespace);
+    let fields2 = split_line(l2, sep, whitespace);
+
+    let result = if let Some(spec) = output_fields {
+        spec.iter().map(|&(file, field)| {
+            match (file, field) {
+                (0, _) => key.to_string(),
+                (1, 0) => key.to_string(),
+                (2, 0) => key.to_string(),
+                (1, n) => fields1.get(n.saturating_sub(1)).copied().unwrap_or(fill).to_string(),
+                (2, n) => fields2.get(n.saturating_sub(1)).copied().unwrap_or(fill).to_string(),
+                _ => fill.to_string(),
+            }
+        }).collect::<Vec<_>>().join(&sep.to_string())
+    } else {
+        // Default: join field, then remaining fields from l1, then remaining from l2
+        let mut parts = vec![key.to_string()];
+        for (idx, &f) in fields1.iter().enumerate() {
+            if idx + 1 != f1 { parts.push(f.to_string()); }
+        }
+        for (idx, &f) in fields2.iter().enumerate() {
+            if idx + 1 != f2 { parts.push(f.to_string()); }
+        }
+        parts.join(&sep.to_string())
+    };
+
+    let _ = writeln!(out, "{}", result);
+}
+
+fn emit_unpairable<W: Write>(
+    line: &str, file: usize, join_field: usize,
+    sep: char, whitespace: bool,
+    output_fields: &Option<Vec<(usize, usize)>>,
+    fill: &str,
+    out: &mut W,
+) {
+    let fields = split_line(line, sep, whitespace);
+    let key = fields.get(join_field.saturating_sub(1)).unwrap_or(&"").to_string();
+
+    let result = if let Some(spec) = output_fields {
+        spec.iter().map(|&(ffile, ffield)| {
+            if ffile == file {
+                fields.get(ffield.saturating_sub(1)).copied().unwrap_or(fill).to_string()
+            } else if ffile == 0 || ffield == 0 {
+                key.clone()
+            } else {
+                fill.to_string()
+            }
+        }).collect::<Vec<_>>().join(&sep.to_string())
+    } else {
+        line.to_string()
+    };
+
+    let _ = writeln!(out, "{}", result);
+}
