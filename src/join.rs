@@ -224,3 +224,16 @@ pub fn run(args: &[String]) -> i32 {
 
     0
 }
+
+fn split_line<'a>(line: &'a str, sep: char, whitespace: bool) -> Vec<&'a str> {
+    if whitespace {
+        line.split_whitespace().collect()
+    } else {
+        line.split(sep).collect()
+    }
+}
+
+fn get_field(line: &str, field: usize, sep: char, whitespace: bool) -> String {
+    let fields = split_line(line, sep, whitespace);
+    fields.get(field.saturating_sub(1)).unwrap_or(&"").to_string()
+}
