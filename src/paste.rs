@@ -68,3 +68,98 @@ pub fn run(args: &[String]) -> i32 {
         paste_parallel(&paths, &delimiter, &mut out)
     }
 }
+
+fn paste_parallel<W: Write>(paths: &[String], delimiters: &[u8], out: &mut W) -> i32 {
+    let mut readers: Vec<Box<dyn BufRead>> = Vec::new();
+    for path in paths {
+        match open(path) {
+            Some(r) => readers.push(r),
+            None => return 1,
+        }
+    }
+
+    let mut exit_code = 0;
+    let mut line = String::new();
+
+    loop {
+        let mut any = false;
+        let mut row = Vec::new();
+
+        for reader in readers.iter_mut() {
+            line.clear();
+            match reader.read_line(&mut line) {
+                Ok(0) => row.push(String::new()),
+                Ok(_) => {
+                    any = true;
+                    let trimmed = line.trim_end_matches('\n').trim_end_matches('\r');
+                    row.push(trimmed.to_string());
+                }
+                Err(_) => {
+                    exit_code = 1;
+                    row.push(String::new());
+                }
+            }
+        }
+
+        if !any {
+            break;
+        }
+
+        let mut output = String::new();
+        for (i, field) in row.iter().enumerate() {
+            output.push_str(field);
+            if i + 1 < row.len() {
+                let d = delimiters[i % delimiters.len()];
+                if d != 0 {
+                    output.push(d as char);
+                }
+            }
+        }
+        let _ = writeln!(out, "{}", output);
+    }
+
+    exit_code
+}
+
+fn paste_serial<W: Write>(paths: &[String], delimiters: &[u8], out: &mut W) -> i32 {
+    let mut exit_code = 0;
+
+    for path in paths {
+        let mut reader = match open(path) {
+            Some(r) => r,
+            None => return 1,
+        };
+
+        let mut line = String::new();
+        let mut first = true;
+        let mut del_idx = 0;
+
+        loop {
+            line.clear();
+            match reader.read_line(&mut line) {
+                Ok(0) => break,
+                Ok(_) => {}
+                Err(_) => {
+                    exit_code = 1;
+                    break;
+                }
+            }
+
+            let content = line.trim_end_matches('\n').trim_end_matches('\r');
+
+            if !first {
+                let d = delimiters[del_idx % delimiters.len()];
+                del_idx += 1;
+                if d != 0 {
+                    let _ = write!(out, "{}", d as char);
+                }
+            }
+            let _ = write!(out, "{}", content);
+            first = false;
+        }
+
+        let _ = writeln!(out);
+    }
+
+    exit_code
+}
