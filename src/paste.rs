@@ -163,3 +163,37 @@ fn paste_serial<W: Write>(paths: &[String], delimiters: &[u8], out: &mut W) -> i
 
     exit_code
 }
+
+fn open(path: &str) -> Option<Box<dyn BufRead>> {
+    if path == "-" {
+        Some(Box::new(io::stdin().lock()))
+    } else {
+        match File::open(path) {
+            Ok(f) => Some(Box::new(BufReader::new(f))),
+            Err(e) => {
+                eprintln!("paste: {}: {}", path, e);
+                None
+            }
+        }
+    }
+}
+
+fn parse_delimiters(s: &str) -> Vec<u8> {
+    let mut out = Vec::new();
+    let mut chars = s.chars();
+    while let Some(ch) = chars.next() {
+        if ch == '\\' {
+            match chars.next() {
+                Some('n') => out.push(b'\n'),
+                Some('t') => out.push(b'\t'),
+                Some('0') => out.push(0), // NUL = no delimiter
+                Some('\\') => out.push(b'\\'),
+                Some(c) => { out.push(b'\\'); out.push(c as u8); }
+                None => out.push(b'\\'),
+            }
+        } else {
+            out.push(ch as u8);
+        }
+    }
+    if out.is_empty() { vec![b'\t'] } else { out }
+}
