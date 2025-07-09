@@ -301,3 +301,30 @@ fn emit_unpairable<W: Write>(
 
     let _ = writeln!(out, "{}", result);
 }
+
+fn parse_output_spec(s: &str) -> Option<Vec<(usize, usize)>> {
+    let mut spec = Vec::new();
+    for part in s.split(',') {
+        if let Some((file_str, field_str)) = part.split_once('.') {
+            let file = file_str.parse::<usize>().ok()?;
+            let field = field_str.parse::<usize>().ok()?;
+            spec.push((file, field));
+        } else {
+            return None;
+        }
+    }
+    if spec.is_empty() { None } else { Some(spec) }
+}
+
+fn read_file(path: &str) -> io::Result<Vec<String>> {
+    let reader: Box<dyn BufRead> = if path == "-" {
+        Box::new(io::stdin().lock())
+    } else {
+        Box::new(BufReader::new(File::open(path)?))
+    };
+    let mut lines = Vec::new();
+    for line in reader.lines() {
+        lines.push(line?);
+    }
+    Ok(lines)
+}
