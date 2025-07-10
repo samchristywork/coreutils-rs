@@ -169,3 +169,68 @@ pub fn run(args: &[String]) -> i32 {
 
     exit_code
 }
+
+struct Opts {
+    numeric: bool,
+    reverse: bool,
+    ignore_case: bool,
+    human_numeric: bool,
+    month_sort: bool,
+    random_sort: bool,
+    stable: bool,
+    field_sep: Option<u8>,
+    keys: Vec<Key>,
+}
+
+struct Key {
+    field_start: usize,
+    char_start: usize,
+    field_end: Option<usize>,
+    char_end: Option<usize>,
+    numeric: bool,
+    reverse: bool,
+    ignore_case: bool,
+    human_numeric: bool,
+    month_sort: bool,
+}
+
+fn compare_lines(a: &str, b: &str, opts: &Opts) -> std::cmp::Ordering {
+    let ord = if !opts.keys.is_empty() {
+        let mut ord = std::cmp::Ordering::Equal;
+        for key in &opts.keys {
+            let ka = extract_key(a, key, opts.field_sep);
+            let kb = extract_key(b, key, opts.field_sep);
+            ord = compare_strs(&ka, &kb, key.numeric || opts.numeric,
+                key.ignore_case || opts.ignore_case,
+                key.human_numeric || opts.human_numeric,
+                key.month_sort || opts.month_sort);
+            if key.reverse { ord = ord.reverse(); }
+            if ord != std::cmp::Ordering::Equal { break; }
+        }
+        if ord == std::cmp::Ordering::Equal {
+            compare_strs(a, b, opts.numeric, opts.ignore_case, opts.human_numeric, opts.month_sort)
+        } else { ord }
+    } else {
+        compare_strs(a, b, opts.numeric, opts.ignore_case, opts.human_numeric, opts.month_sort)
+    };
+    if opts.reverse { ord.reverse() } else { ord }
+}
+
+fn compare_strs(a: &str, b: &str, numeric: bool, ignore_case: bool, human_numeric: bool, month_sort: bool) -> std::cmp::Ordering {
+    if human_numeric {
+        return parse_human(a).partial_cmp(&parse_human(b)).unwrap_or(std::cmp::Ordering::Equal);
+    }
+    if month_sort {
+        return month_value(a).cmp(&month_value(b));
+    }
+    if numeric {
+        let na = parse_numeric(a);
+        let nb = parse_numeric(b);
+        return na.partial_cmp(&nb).unwrap_or(std::cmp::Ordering::Equal);
+    }
+    if ignore_case {
+        a.to_lowercase().cmp(&b.to_lowercase())
+    } else {
+        a.cmp(b)
+    }
+}
