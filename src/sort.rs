@@ -234,3 +234,60 @@ fn compare_strs(a: &str, b: &str, numeric: bool, ignore_case: bool, human_numeri
         a.cmp(b)
     }
 }
+
+fn extract_key(line: &str, key: &Key, field_sep: Option<u8>) -> String {
+    let sep = field_sep.map(|b| b as char).unwrap_or(' ');
+    let fields: Vec<&str> = if field_sep.is_some() {
+        line.split(sep).collect()
+    } else {
+        // whitespace: split on runs
+        line.split_whitespace().collect()
+    };
+
+    let start_field = key.field_start.saturating_sub(1).min(fields.len());
+    let start_char = key.char_start.saturating_sub(1);
+
+    let end_field = key.field_end.map(|f| f.min(fields.len())).unwrap_or(fields.len());
+    let end_char = key.char_end;
+
+    if start_field >= fields.len() {
+        return String::new();
+    }
+
+    let start_str = fields[start_field];
+    let start_str = if start_char < start_str.len() {
+        &start_str[start_char..]
+    } else {
+        ""
+    };
+
+    if key.field_end.is_none() {
+        // From start to end of line
+        let remaining: Vec<&str> = fields[start_field..].to_vec();
+        let mut s = remaining.join(&sep.to_string());
+        if start_char > 0 && !s.is_empty() {
+            s = s[start_char.min(s.len())..].to_string();
+        } else {
+            s = start_str.to_string();
+        }
+        return s;
+    }
+
+    let end_field_idx = end_field.saturating_sub(1).min(fields.len().saturating_sub(1));
+    if start_field == end_field_idx {
+        let s = start_str;
+        let s = if let Some(ec) = end_char {
+            &s[..ec.min(s.len())]
+        } else { s };
+        return s.to_string();
+    }
+
+    let mut parts: Vec<&str> = fields[start_field..=end_field_idx].to_vec();
+    if let Some(ec) = end_char {
+        if let Some(last) = parts.last_mut() {
+            *last = &last[..ec.min(last.len())];
+        }
+    }
+    parts[0] = start_str;
+    parts.join(&sep.to_string())
+}
