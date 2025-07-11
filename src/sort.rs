@@ -291,3 +291,85 @@ fn extract_key(line: &str, key: &Key, field_sep: Option<u8>) -> String {
     parts[0] = start_str;
     parts.join(&sep.to_string())
 }
+
+fn parse_key(s: &str) -> Option<Key> {
+
+    // Parse: start[,end] where start/end = field[.char][flags]
+    let (start_str, end_str) = if let Some(comma) = s.find(',') {
+        (&s[..comma], Some(&s[comma+1..]))
+    } else {
+        (s, None)
+    };
+
+    let (sf, sc, n1, r1, ic1, hn1, ms1) = parse_key_pos(start_str)?;
+    let (ef, ec, n2, r2, ic2, hn2, ms2) = if let Some(e) = end_str {
+        let (f, c, n, r, ic, hn, ms) = parse_key_pos(e)?;
+        (Some(f), Some(c), n, r, ic, hn, ms)
+    } else {
+        (None, None, false, false, false, false, false)
+    };
+
+    Some(Key {
+        field_start: sf,
+        char_start: sc,
+        field_end: ef,
+        char_end: if ec == Some(0) { None } else { ec },
+        numeric: n1 || n2,
+        reverse: r1 || r2,
+        ignore_case: ic1 || ic2,
+        human_numeric: hn1 || hn2,
+        month_sort: ms1 || ms2,
+    })
+}
+
+fn parse_key_pos(s: &str) -> Option<(usize, usize, bool, bool, bool, bool, bool)> {
+    let mut num_str = String::new();
+    let mut char_str = String::new();
+    let mut flags = String::new();
+    let mut in_char = false;
+    let mut in_flags = false;
+
+    for ch in s.chars() {
+        if ch.is_ascii_digit() {
+            if in_flags { return None; }
+            if in_char { char_str.push(ch); } else { num_str.push(ch); }
+        } else if ch == '.' {
+            in_char = true;
+        } else {
+            in_flags = true;
+            flags.push(ch);
+        }
+    }
+
+    let field: usize = num_str.parse().ok().filter(|&n| n > 0)?;
+    let char_off: usize = if char_str.is_empty() { 0 } else { char_str.parse().ok()? };
+
+    let numeric = flags.contains('n');
+    let reverse = flags.contains('r');
+    let ignore_case = flags.contains('f');
+    let human = flags.contains('h');
+    let month = flags.contains('M');
+
+    Some((field, char_off, numeric, reverse, ignore_case, human, month))
+}
+
+fn parse_numeric(s: &str) -> f64 {
+    let s = s.trim_start();
+    let s = s.trim_start_matches('+');
+    s.parse::<f64>().unwrap_or(0.0)
+}
+
+fn parse_human(s: &str) -> f64 {
+    let s = s.trim();
+    if s.is_empty() { return 0.0; }
+    let (num_part, suffix) = s.split_at(s.len() - 1);
+    let multiplier = match suffix {
+        "K" | "k" => 1_000f64,
+        "M" => 1_000_000f64,
+        "G" => 1_000_000_000f64,
+        "T" => 1_000_000_000_000f64,
+        "P" => 1_000_000_000_000_000f64,
+        _ => return s.parse::<f64>().unwrap_or(0.0),
+    };
+    num_part.parse::<f64>().unwrap_or(0.0) * multiplier
+}
