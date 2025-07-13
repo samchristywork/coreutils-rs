@@ -398,3 +398,17 @@ fn read_lines<R: BufRead>(reader: &mut R, lines: &mut Vec<String>) -> i32 {
     }
     0
 }
+
+fn simple_rng_seed() -> u64 {
+    // Use a fixed seed based on address of a local variable for mild entropy
+    let x: u64 = 0;
+    let addr = &x as *const u64 as u64;
+    addr ^ 0xdeadbeefcafe
+}
+
+fn simple_rng_next(state: &mut u64) -> usize {
+    *state ^= *state << 13;
+    *state ^= *state >> 7;
+    *state ^= *state << 17;
+    *state as usize
+}
