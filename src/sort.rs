@@ -373,3 +373,12 @@ fn parse_human(s: &str) -> f64 {
     };
     num_part.parse::<f64>().unwrap_or(0.0) * multiplier
 }
+
+fn month_value(s: &str) -> u8 {
+    match s.trim().to_uppercase().get(..3).unwrap_or("") {
+        "JAN" => 1, "FEB" => 2, "MAR" => 3, "APR" => 4,
+        "MAY" => 5, "JUN" => 6, "JUL" => 7, "AUG" => 8,
+        "SEP" => 9, "OCT" => 10, "NOV" => 11, "DEC" => 12,
+        _ => 0,
+    }
+}
