@@ -382,3 +382,19 @@ fn month_value(s: &str) -> u8 {
         _ => 0,
     }
 }
+
+fn read_lines<R: BufRead>(reader: &mut R, lines: &mut Vec<String>) -> i32 {
+    let mut line = String::new();
+    loop {
+        line.clear();
+        match reader.read_line(&mut line) {
+            Ok(0) => break,
+            Ok(_) => {
+                let s = line.trim_end_matches('\n').trim_end_matches('\r').to_string();
+                lines.push(s);
+            }
+            Err(_) => return 1,
+        }
+    }
+    0
+}
