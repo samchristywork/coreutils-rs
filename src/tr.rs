@@ -102,3 +102,68 @@ pub fn run(args: &[String]) -> i32 {
         else { Action::Map(mapped) }
     }, squeeze)
 }
+
+#[derive(Clone, Copy)]
+enum Action {
+    Keep,
+    Delete,
+    Squeeze,
+    Map(u8),
+    MapSqueeze(u8),
+}
+
+fn translate_stdin<F>(f: F, _squeeze: bool) -> i32
+where
+    F: Fn(u8) -> Action,
+{
+    let stdin = io::stdin();
+    let stdout = io::stdout();
+    let mut inp = stdin.lock();
+    let mut out = io::BufWriter::new(stdout.lock());
+
+    let mut buf = [0u8; 65536];
+    let mut last: Option<u8> = None;
+
+    loop {
+        let n = match inp.read(&mut buf) {
+            Ok(0) => break,
+            Ok(n) => n,
+            Err(e) if e.kind() == io::ErrorKind::Interrupted => continue,
+            Err(_) => return 1,
+        };
+
+        let mut out_buf = Vec::with_capacity(n);
+        for &b in &buf[..n] {
+            match f(b) {
+                Action::Keep => {
+                    out_buf.push(b);
+                    last = Some(b);
+                }
+                Action::Delete => {
+                    last = None;
+                }
+                Action::Squeeze => {
+                    if last != Some(b) {
+                        out_buf.push(b);
+                        last = Some(b);
+                    }
+                }
+                Action::Map(m) => {
+                    out_buf.push(m);
+                    last = Some(m);
+                }
+                Action::MapSqueeze(m) => {
+                    if last != Some(m) {
+                        out_buf.push(m);
+                        last = Some(m);
+                    }
+                }
+            }
+        }
+
+        if out.write_all(&out_buf).is_err() {
+            return 1;
+        }
+    }
+    0
+}
