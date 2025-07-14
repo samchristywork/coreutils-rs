@@ -173,3 +173,55 @@ fn uniq_reader<R: BufRead, W: Write>(mut reader: R, out: &mut W, opts: &Opts) ->
 
     exit_code
 }
+
+fn compare_key(a: &str, b: &str, opts: &Opts) -> bool {
+    let ka = extract_key(a, opts);
+    let kb = extract_key(b, opts);
+    if opts.ignore_case {
+        ka.to_lowercase() == kb.to_lowercase()
+    } else {
+        ka == kb
+    }
+}
+
+fn extract_key<'a>(s: &'a str, opts: &Opts) -> &'a str {
+    let mut start = 0;
+
+    if opts.skip_fields > 0 {
+        let mut fields_skipped = 0;
+        let mut in_space = true;
+        for (i, ch) in s.char_indices() {
+            if ch == ' ' || ch == '\t' {
+                if !in_space {
+                    fields_skipped += 1;
+                    if fields_skipped == opts.skip_fields {
+                        start = i;
+                        break;
+                    }
+                    in_space = true;
+                }
+            } else {
+                in_space = false;
+            }
+        }
+        // Skip trailing whitespace after fields
+        while start < s.len() && (s.as_bytes()[start] == b' ' || s.as_bytes()[start] == b'\t') {
+            start += 1;
+        }
+    }
+
+    let s = &s[start..];
+    let s = if opts.skip_chars > 0 {
+        let byte_pos = s.char_indices().nth(opts.skip_chars).map(|(i, _)| i).unwrap_or(s.len());
+        &s[byte_pos..]
+    } else {
+        s
+    };
+
+    if let Some(n) = opts.check_chars {
+        let byte_end = s.char_indices().nth(n).map(|(i, _)| i).unwrap_or(s.len());
+        &s[..byte_end]
+    } else {
+        s
+    }
+}
