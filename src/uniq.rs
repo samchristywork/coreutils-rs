@@ -112,3 +112,64 @@ pub fn run(args: &[String]) -> i32 {
     let opts = Opts { count, repeated, unique, ignore_case, skip_fields, skip_chars, check_chars };
     uniq_reader(input, &mut out, &opts)
 }
+
+struct Opts {
+    count: bool,
+    repeated: bool,
+    unique: bool,
+    ignore_case: bool,
+    skip_fields: usize,
+    skip_chars: usize,
+    check_chars: Option<usize>,
+}
+
+fn uniq_reader<R: BufRead, W: Write>(mut reader: R, out: &mut W, opts: &Opts) -> i32 {
+    let mut prev: Option<String> = None;
+    let mut run_count: u64 = 0;
+    let mut exit_code = 0;
+
+    let mut line = String::new();
+    loop {
+        line.clear();
+        let done = match reader.read_line(&mut line) {
+            Ok(0) => true,
+            Ok(_) => false,
+            Err(_) => { exit_code = 1; true }
+        };
+
+        let current = if done {
+            None
+        } else {
+            Some(line.trim_end_matches('\n').trim_end_matches('\r').to_string())
+        };
+
+        match (&prev, &current) {
+            (Some(p), Some(c)) => {
+                if compare_key(p, c, opts) {
+                    run_count += 1;
+                } else {
+                    if should_print(run_count, opts) {
+                        exit_code |= emit(p, run_count, opts, out);
+                    }
+                    prev = Some(c.clone());
+                    run_count = 1;
+                }
+            }
+            (None, Some(c)) => {
+                prev = Some(c.clone());
+                run_count = 1;
+            }
+            (Some(p), None) => {
+                if should_print(run_count, opts) {
+                    exit_code |= emit(p, run_count, opts, out);
+                }
+                break;
+            }
+            (None, None) => break,
+        }
+
+        if done { break; }
+    }
+
+    exit_code
+}
