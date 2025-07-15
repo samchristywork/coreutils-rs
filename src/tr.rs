@@ -208,3 +208,96 @@ fn build_map(set1: &[u8], set2: &[u8], complement: bool) -> Vec<u8> {
 
     map
 }
+
+fn expand_set(s: &str) -> Option<Vec<u8>> {
+    let mut out = Vec::new();
+    let bytes = s.as_bytes();
+    let mut i = 0;
+
+    while i < bytes.len() {
+        if bytes[i] == b'\\' {
+            i += 1;
+            if i >= bytes.len() { return None; }
+            let ch = match bytes[i] {
+                b'n' => b'\n',
+                b't' => b'\t',
+                b'r' => b'\r',
+                b'a' => b'\x07',
+                b'b' => b'\x08',
+                b'f' => b'\x0C',
+                b'v' => b'\x0B',
+                b'\\' => b'\\',
+                b'0'..=b'7' => {
+                    // Octal escape up to 3 digits
+                    let mut val = (bytes[i] - b'0') as u32;
+                    for _ in 0..2 {
+                        if i + 1 < bytes.len() && bytes[i+1] >= b'0' && bytes[i+1] <= b'7' {
+                            i += 1;
+                            val = val * 8 + (bytes[i] - b'0') as u32;
+                        } else {
+                            break;
+                        }
+                    }
+                    if val > 255 { return None; }
+                    val as u8
+                }
+                c => c,
+            };
+            out.push(ch);
+            i += 1;
+        } else if i + 2 < bytes.len() && bytes[i + 1] == b'-' {
+            // Range a-z
+            let start = bytes[i];
+            let end = bytes[i + 2];
+            if end < start { return None; }
+            for c in start..=end {
+                out.push(c);
+            }
+            i += 3;
+        } else if bytes[i] == b'[' {
+            // POSIX classes [:alpha:] etc or [=c=] or [x*n] repetition
+            if i + 1 < bytes.len() && bytes[i + 1] == b':' {
+                let close = bytes[i..].windows(2).position(|w| w == b":]");
+                if let Some(rel) = close {
+                    let class = &s[i+2..i+rel];
+                    expand_class(class, &mut out);
+                    i += rel + 2;
+                    continue;
+                }
+            }
+            if i + 1 < bytes.len() && bytes[i + 1] == b'=' {
+                // [=c=] equivalence class — just use the char
+                if i + 4 < bytes.len() && bytes[i + 3] == b'=' && bytes[i + 4] == b']' {
+                    out.push(bytes[i + 2]);
+                    i += 5;
+                    continue;
+                }
+            }
+            if let Some(star_pos) = bytes[i+1..].iter().position(|&b| b == b'*') {
+                let star_pos = star_pos + i + 1;
+                if star_pos + 1 < bytes.len() && bytes[star_pos + 1] != b']' {
+                    // [x*n] repeat x n times
+                    let ch = bytes[i + 1];
+                    let count_str = std::str::from_utf8(&bytes[star_pos+1..]).ok()?;
+                    let end = count_str.find(']').unwrap_or(count_str.len());
+                    let count: usize = count_str[..end].parse().unwrap_or(0);
+                    if count == 0 {
+                        // [x*] means fill to length of set1 — we can't know here, push one
+                        out.push(ch);
+                    } else {
+                        for _ in 0..count { out.push(ch); }
+                    }
+                    i = star_pos + 1 + end + 1;
+                    continue;
+                }
+            }
+            out.push(bytes[i]);
+            i += 1;
+        } else {
+            out.push(bytes[i]);
+            i += 1;
+        }
+    }
+
+    Some(out)
+}
