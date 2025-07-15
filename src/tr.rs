@@ -301,3 +301,21 @@ fn expand_set(s: &str) -> Option<Vec<u8>> {
 
     Some(out)
 }
+
+fn expand_class(class: &str, out: &mut Vec<u8>) {
+    match class {
+        "alpha"  => out.extend(b"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"),
+        "lower"  => out.extend(b"abcdefghijklmnopqrstuvwxyz"),
+        "upper"  => out.extend(b"ABCDEFGHIJKLMNOPQRSTUVWXYZ"),
+        "digit"  => out.extend(b"0123456789"),
+        "alnum"  => out.extend(b"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"),
+        "space"  => out.extend(b" \t\n\r\x0B\x0C"),
+        "blank"  => out.extend(b" \t"),
+        "punct"  => out.extend(b"!\"#$%&'()*+,-./:;<=>?@[\\]^_`{|}~"),
+        "print"  => out.extend(0x20u8..=0x7E),
+        "graph"  => out.extend(0x21u8..=0x7E),
+        "cntrl"  => { out.extend(0x00u8..=0x1F); out.push(0x7F); }
+        "xdigit" => out.extend(b"0123456789abcdefABCDEF"),
+        _ => {}
+    }
+}
