@@ -155,3 +155,32 @@ pub fn run(args: &[String]) -> i32 {
 
     if diff_found { 1 } else { 0 }
 }
+
+fn open(path: &str) -> io::Result<Box<dyn Read>> {
+    if path == "-" {
+        Ok(Box::new(io::stdin().lock()))
+    } else {
+        Ok(Box::new(BufReader::new(File::open(path)?)))
+    }
+}
+
+fn skip_bytes(r: &mut Box<dyn Read>, n: u64) -> io::Result<()> {
+    let mut buf = [0u8; 4096];
+    let mut remaining = n;
+    while remaining > 0 {
+        let to_read = remaining.min(buf.len() as u64) as usize;
+        let got = r.read(&mut buf[..to_read])?;
+        if got == 0 { break; }
+        remaining -= got as u64;
+    }
+    Ok(())
+}
+
+fn parse_skip(s: &str) -> Option<(u64, u64)> {
+    if let Some((a, b)) = s.split_once(':') {
+        Some((a.parse().ok()?, b.parse().ok()?))
+    } else {
+        let n = s.parse().ok()?;
+        Some((n, n))
+    }
+}
