@@ -1,6 +1,13 @@
 mod cp;
 mod ls;
 mod cat;
+mod comm;
+mod cut;
+mod join;
+mod paste;
+mod sort;
+mod tr;
+mod uniq;
 mod head;
 mod nl;
 mod tail;
@@ -51,6 +58,14 @@ fn main() {
         "tail" => tail::run(cmd_args),
         "nl" => nl::run(cmd_args),
         "wc" => wc::run(cmd_args),
+        // Text Processing
+        "comm" => comm::run(cmd_args),
+        "join" => join::run(cmd_args),
+        "cut" => cut::run(cmd_args),
+        "paste" => paste::run(cmd_args),
+        "sort" => sort::run(cmd_args),
+        "uniq" => uniq::run(cmd_args),
+        "tr" => tr::run(cmd_args),
         _ => {
             eprintln!("coreutils-rs: '{}' is not a supported command", cmd);
             1
