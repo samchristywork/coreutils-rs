@@ -178,3 +178,33 @@ fn make_bool_table(chars: &[u8], complement: bool) -> Vec<bool> {
     }
     table
 }
+
+fn build_map(set1: &[u8], set2: &[u8], complement: bool) -> Vec<u8> {
+    // Identity map
+    let mut map: Vec<u8> = (0u8..=255).collect();
+
+    if complement {
+        // Characters NOT in set1 get mapped; map them in order to set2
+        let in_set1: Vec<bool> = make_bool_table(set1, false);
+        let last2 = *set2.last().unwrap_or(&b' ');
+        let mut s2_idx = 0usize;
+        for i in 0usize..256 {
+            if !in_set1[i] {
+                map[i] = if s2_idx < set2.len() {
+                    let v = set2[s2_idx];
+                    s2_idx += 1;
+                    v
+                } else {
+                    last2
+                };
+            }
+        }
+    } else {
+        let last2 = *set2.last().unwrap_or(&b' ');
+        for (idx, &c) in set1.iter().enumerate() {
+            map[c as usize] = if idx < set2.len() { set2[idx] } else { last2 };
+        }
+    }
+
+    map
+}
