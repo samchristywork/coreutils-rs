@@ -167,3 +167,14 @@ where
     }
     0
 }
+
+fn make_bool_table(chars: &[u8], complement: bool) -> Vec<bool> {
+    let mut table = vec![false; 256];
+    for &c in chars {
+        table[c as usize] = true;
+    }
+    if complement {
+        table.iter_mut().for_each(|b| *b = !*b);
+    }
+    table
+}
