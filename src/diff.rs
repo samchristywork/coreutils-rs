@@ -260,3 +260,47 @@ fn print_normal<W: Write>(a: &[String], b: &[String], edits: &[Edit], out: &mut 
         for &y in &ins  { let _ = writeln!(out, "> {}", b[y]); }
     }
 }
+
+fn print_unified<W: Write>(a: &[String], b: &[String], edits: &[Edit], path1: &str, path2: &str, ctx: usize, out: &mut W) {
+    let _ = writeln!(out, "--- {}", path1);
+    let _ = writeln!(out, "+++ {}", path2);
+
+    let n = edits.len();
+    let mut hunks: Vec<(usize, usize)> = Vec::new();
+
+    let mut i = 0;
+    while i < n {
+        if edits[i].kind == Kind::Keep { i += 1; continue; }
+        let start = i.saturating_sub(ctx);
+        while i < n && edits[i].kind != Kind::Keep { i += 1; }
+        let end = (i + ctx).min(n);
+        if let Some(last) = hunks.last_mut() {
+            if start <= last.1 { last.1 = end; continue; }
+        }
+        hunks.push((start, end));
+    }
+
+    for (hstart, hend) in hunks {
+        // Compute starting line numbers by counting edits before hstart
+        let mut a_line = 1usize;
+        let mut b_line = 1usize;
+        for e in &edits[..hstart] {
+            match e.kind {
+                Kind::Keep   => { a_line += 1; b_line += 1; }
+                Kind::Delete => { a_line += 1; }
+                Kind::Insert => { b_line += 1; }
+            }
+        }
+        let a_count = edits[hstart..hend].iter().filter(|e| e.kind != Kind::Insert).count();
+        let b_count = edits[hstart..hend].iter().filter(|e| e.kind != Kind::Delete).count();
+
+        let _ = writeln!(out, "@@ -{},{} +{},{} @@", a_line, a_count, b_line, b_count);
+        for e in &edits[hstart..hend] {
+            match e.kind {
+                Kind::Keep   => { let _ = writeln!(out, " {}", a[e.idx]); }
+                Kind::Delete => { let _ = writeln!(out, "-{}", a[e.idx]); }
+                Kind::Insert => { let _ = writeln!(out, "+{}", b[e.idx]); }
+            }
+        }
+    }
+}
