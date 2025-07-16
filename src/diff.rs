@@ -114,3 +114,38 @@ fn diff_paths<W: Write>(path1: &str, path2: &str, recursive: bool, opts: &Opts, 
 
     1
 }
+
+fn diff_dirs<W: Write>(dir1: &str, dir2: &str, opts: &Opts, out: &mut W) -> i32 {
+    let mut names1 = read_dir_names(dir1);
+    let mut names2 = read_dir_names(dir2);
+    names1.sort();
+    names2.sort();
+
+    let mut exit_code = 0;
+    let mut i = 0;
+    let mut j = 0;
+    while i < names1.len() || j < names2.len() {
+        let ord = match (names1.get(i), names2.get(j)) {
+            (None, _) => std::cmp::Ordering::Greater,
+            (_, None) => std::cmp::Ordering::Less,
+            (Some(a), Some(b)) => a.cmp(b),
+        };
+        match ord {
+            std::cmp::Ordering::Less => {
+                let _ = writeln!(out, "Only in {}: {}", dir1, names1[i]);
+                i += 1; exit_code = 1;
+            }
+            std::cmp::Ordering::Greater => {
+                let _ = writeln!(out, "Only in {}: {}", dir2, names2[j]);
+                j += 1; exit_code = 1;
+            }
+            std::cmp::Ordering::Equal => {
+                let p1 = format!("{}/{}", dir1, names1[i]);
+                let p2 = format!("{}/{}", dir2, names2[j]);
+                exit_code |= diff_paths(&p1, &p2, true, opts, out);
+                i += 1; j += 1;
+            }
+        }
+    }
+    exit_code
+}
