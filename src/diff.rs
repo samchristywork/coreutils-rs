@@ -261,6 +261,14 @@ fn print_normal<W: Write>(a: &[String], b: &[String], edits: &[Edit], out: &mut 
     }
 }
 
+fn range_str(first: Option<usize>, last: Option<usize>) -> String {
+    match (first, last) {
+        (Some(f), Some(l)) if f == l => format!("{}", f + 1),
+        (Some(f), Some(l)) => format!("{},{}", f + 1, l + 1),
+        _ => String::new(),
+    }
+}
+
 fn print_unified<W: Write>(a: &[String], b: &[String], edits: &[Edit], path1: &str, path2: &str, ctx: usize, out: &mut W) {
     let _ = writeln!(out, "--- {}", path1);
     let _ = writeln!(out, "+++ {}", path2);
@@ -303,4 +311,15 @@ fn print_unified<W: Write>(a: &[String], b: &[String], edits: &[Edit], path1: &s
             }
         }
     }
+}
+
+fn read_lines(path: &str) -> io::Result<Vec<String>> {
+    let content = if path == "-" {
+        let mut s = String::new();
+        io::stdin().lock().read_to_string(&mut s)?;
+        s
+    } else {
+        fs::read_to_string(path)?
+    };
+    Ok(content.lines().map(|l| l.to_string()).collect())
 }
