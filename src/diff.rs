@@ -222,3 +222,41 @@ fn compute_diff(a: &[String], b: &[String]) -> Vec<Edit> {
     }
     edits
 }
+
+fn print_normal<W: Write>(a: &[String], b: &[String], edits: &[Edit], out: &mut W) {
+    let n = edits.len();
+    let mut i = 0;
+    while i < n {
+        if edits[i].kind == Kind::Keep { i += 1; continue; }
+
+        let start = i;
+        while i < n && edits[i].kind != Kind::Keep { i += 1; }
+
+        let dels: Vec<usize> = edits[start..i].iter().filter(|e| e.kind == Kind::Delete).map(|e| e.idx).collect();
+        let ins: Vec<usize>  = edits[start..i].iter().filter(|e| e.kind == Kind::Insert).map(|e| e.idx).collect();
+
+        let left = range_str(dels.first().copied(), dels.last().copied());
+        let right = range_str(ins.first().copied(), ins.last().copied());
+
+        let op = match (!dels.is_empty(), !ins.is_empty()) {
+            (true, true)  => 'c',
+            (true, false) => 'd',
+            (false, true) => 'a',
+            (false, false) => continue,
+        };
+
+        // For 'a', left is the line after which insertion happens
+        let left_str = if op == 'a' {
+            format!("{}", dels.first().map(|&x| x).unwrap_or(ins[0].saturating_sub(1)) + 1)
+        } else { left };
+        // For 'd', right is the line before which deletion would go
+        let right_str = if op == 'd' {
+            format!("{}", ins.first().map(|&x| x + 1).unwrap_or(dels.last().map(|&x| x + 1).unwrap_or(0)))
+        } else { right };
+
+        let _ = writeln!(out, "{}{}{}", left_str, op, right_str);
+        for &x in &dels { let _ = writeln!(out, "< {}", a[x]); }
+        if !dels.is_empty() && !ins.is_empty() { let _ = writeln!(out, "---"); }
+        for &y in &ins  { let _ = writeln!(out, "> {}", b[y]); }
+    }
+}
