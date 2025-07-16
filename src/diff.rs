@@ -67,3 +67,50 @@ pub fn run(args: &[String]) -> i32 {
     let opts = Opts { unified, ignore_case, ignore_blank_lines, ignore_space_change, ignore_all_space };
     diff_paths(&paths[0], &paths[1], recursive, &opts, &mut out)
 }
+
+struct Opts {
+    unified: Option<usize>,
+    ignore_case: bool,
+    ignore_blank_lines: bool,
+    ignore_space_change: bool,
+    ignore_all_space: bool,
+}
+
+fn diff_paths<W: Write>(path1: &str, path2: &str, recursive: bool, opts: &Opts, out: &mut W) -> i32 {
+    let is_dir1 = fs::metadata(path1).map(|m| m.is_dir()).unwrap_or(false);
+    let is_dir2 = fs::metadata(path2).map(|m| m.is_dir()).unwrap_or(false);
+
+    if is_dir1 && is_dir2 {
+        if !recursive {
+            eprintln!("diff: {}: Is a directory", path1);
+            return 2;
+        }
+        return diff_dirs(path1, path2, opts, out);
+    }
+
+    let lines1 = match read_lines(path1) {
+        Ok(l) => l,
+        Err(e) => { eprintln!("diff: {}: {}", path1, e); return 2; }
+    };
+    let lines2 = match read_lines(path2) {
+        Ok(l) => l,
+        Err(e) => { eprintln!("diff: {}: {}", path2, e); return 2; }
+    };
+
+    let cmp1: Vec<String> = lines1.iter().map(|l| normalize(l, opts)).collect();
+    let cmp2: Vec<String> = lines2.iter().map(|l| normalize(l, opts)).collect();
+
+    let edits = compute_diff(&cmp1, &cmp2);
+
+    if edits.iter().all(|e| e.kind == Kind::Keep) {
+        return 0;
+    }
+
+    if let Some(ctx) = opts.unified {
+        print_unified(&lines1, &lines2, &edits, path1, path2, ctx, out);
+    } else {
+        print_normal(&lines1, &lines2, &edits, out);
+    }
+
+    1
+}
