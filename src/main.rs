@@ -1,8 +1,10 @@
 mod cp;
 mod ls;
 mod cat;
+mod cmp;
 mod comm;
 mod cut;
+mod diff;
 mod join;
 mod paste;
 mod sort;
@@ -66,6 +68,9 @@ fn main() {
         "sort" => sort::run(cmd_args),
         "uniq" => uniq::run(cmd_args),
         "tr" => tr::run(cmd_args),
+        // Searching and Comparing
+        "cmp" => cmp::run(cmd_args),
+        "diff" => diff::run(cmd_args),
         _ => {
             eprintln!("coreutils-rs: '{}' is not a supported command", cmd);
             1
