@@ -179,3 +179,46 @@ fn normalize(s: &str, opts: &Opts) -> String {
     }
     s
 }
+
+#[derive(Clone, PartialEq)]
+enum Kind { Keep, Delete, Insert }
+
+struct Edit {
+    kind: Kind,
+    idx: usize, // into a (Delete/Keep) or b (Insert)
+}
+
+fn compute_diff(a: &[String], b: &[String]) -> Vec<Edit> {
+    let n = a.len();
+    let m = b.len();
+
+    // LCS via DP, then build edits from the traceback
+    // dp[i][j] = length of LCS of a[..i] and b[..j]
+    let mut dp = vec![vec![0u32; m + 1]; n + 1];
+    for i in (0..n).rev() {
+        for j in (0..m).rev() {
+            dp[i][j] = if a[i] == b[j] {
+                dp[i + 1][j + 1] + 1
+            } else {
+                dp[i + 1][j].max(dp[i][j + 1])
+            };
+        }
+    }
+
+    let mut edits = Vec::new();
+    let mut i = 0;
+    let mut j = 0;
+    while i < n || j < m {
+        if i < n && j < m && a[i] == b[j] {
+            edits.push(Edit { kind: Kind::Keep, idx: i });
+            i += 1; j += 1;
+        } else if j < m && (i >= n || dp[i][j + 1] > dp[i + 1][j]) {
+            edits.push(Edit { kind: Kind::Insert, idx: j });
+            j += 1;
+        } else {
+            edits.push(Edit { kind: Kind::Delete, idx: i });
+            i += 1;
+        }
+    }
+    edits
+}
