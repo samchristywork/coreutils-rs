@@ -149,3 +149,33 @@ fn diff_dirs<W: Write>(dir1: &str, dir2: &str, opts: &Opts, out: &mut W) -> i32 
     }
     exit_code
 }
+
+fn read_dir_names(dir: &str) -> Vec<String> {
+    fs::read_dir(dir).ok().into_iter().flatten().flatten()
+        .map(|e| e.file_name().to_string_lossy().to_string())
+        .collect()
+}
+
+fn normalize(s: &str, opts: &Opts) -> String {
+    let mut s = s.to_string();
+    if opts.ignore_case { s = s.to_lowercase(); }
+    if opts.ignore_all_space {
+        s.retain(|c| c != ' ' && c != '\t');
+    } else if opts.ignore_space_change {
+        let mut out = String::new();
+        let mut prev = false;
+        for ch in s.chars() {
+            if ch == ' ' || ch == '\t' {
+                if !prev { out.push(' '); }
+                prev = true;
+            } else {
+                out.push(ch); prev = false;
+            }
+        }
+        s = out.trim().to_string();
+    }
+    if opts.ignore_blank_lines && s.trim().is_empty() {
+        s = "\x00blank\x00".to_string();
+    }
+    s
+}
