@@ -52,3 +52,40 @@ pub fn run(args: &[String]) -> i32 {
     }
     exit_code
 }
+
+fn chmod_path(path: &Path, mode_str: &str, recursive: bool, verbose: bool, changes: bool) -> i32 {
+    let meta = match fs::metadata(path) {
+        Ok(m) => m,
+        Err(e) => { eprintln!("chmod: cannot access '{}': {}", path.display(), e); return 1; }
+    };
+
+    let old_mode = meta.permissions().mode();
+    let new_mode = match apply_mode(old_mode, mode_str) {
+        Some(m) => m,
+        None => { eprintln!("chmod: invalid mode: '{}'", mode_str); return 1; }
+    };
+
+    // For directories under -R: recurse first, then apply (so we don't lose execute access)
+    if recursive && meta.is_dir() {
+        if let Ok(entries) = fs::read_dir(path) {
+            for entry in entries.flatten() {
+                chmod_path(&entry.path(), mode_str, recursive, verbose, changes);
+            }
+        }
+    }
+
+    if new_mode != old_mode {
+        let perms = fs::Permissions::from_mode(new_mode);
+        if let Err(e) = fs::set_permissions(path, perms) {
+            eprintln!("chmod: cannot change permissions of '{}': {}", path.display(), e);
+            return 1;
+        }
+        if verbose || changes {
+            println!("mode of '{}' changed from {:04o} to {:04o}", path.display(), old_mode & 0o7777, new_mode & 0o7777);
+        }
+    } else if verbose {
+        println!("mode of '{}' retained as {:04o}", path.display(), old_mode & 0o7777);
+    }
+
+    0
+}
