@@ -145,3 +145,26 @@ fn parse_owner(spec: &str, group_only: bool) -> Option<(Option<u32>, Option<u32>
         Some((Some(uid), None))
     }
 }
+
+fn resolve_user(name: &str) -> Option<u32> {
+    if let Ok(n) = name.parse::<u32>() {
+        return Some(n);
+    }
+    // getpwnam
+    let name_c = CString::new(name).ok()?;
+    #[repr(C)]
+    struct Passwd {
+        pw_name: *const i8,
+        pw_passwd: *const i8,
+        pw_uid: u32,
+        pw_gid: u32,
+        pw_gecos: *const i8,
+        pw_dir: *const i8,
+        pw_shell: *const i8,
+    }
+    extern "C" {
+        fn getpwnam(name: *const i8) -> *const Passwd;
+    }
+    let pw = unsafe { getpwnam(name_c.as_ptr()) };
+    if pw.is_null() { None } else { Some(unsafe { (*pw).pw_uid }) }
+}
