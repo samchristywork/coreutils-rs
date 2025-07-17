@@ -129,3 +129,19 @@ fn chown_path(path: &Path, uid: Option<u32>, gid: Option<u32>, recursive: bool, 
 
     0
 }
+
+fn parse_owner(spec: &str, group_only: bool) -> Option<(Option<u32>, Option<u32>)> {
+    if group_only {
+        let gid = resolve_group(spec)?;
+        return Some((None, Some(gid)));
+    }
+
+    if let Some((user_part, group_part)) = spec.split_once(':').or_else(|| spec.split_once('.')) {
+        let uid = if user_part.is_empty() { None } else { Some(resolve_user(user_part)?) };
+        let gid = if group_part.is_empty() { None } else { Some(resolve_group(group_part)?) };
+        Some((uid, gid))
+    } else {
+        let uid = resolve_user(spec)?;
+        Some((Some(uid), None))
+    }
+}
