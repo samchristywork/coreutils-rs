@@ -82,3 +82,50 @@ fn run_impl(args: &[String], group_only: bool) -> i32 {
     }
     exit_code
 }
+
+fn chown_path(path: &Path, uid: Option<u32>, gid: Option<u32>, recursive: bool, verbose: bool, changes: bool, group_only: bool) -> i32 {
+    let cmd = if group_only { "chgrp" } else { "chown" };
+
+    let meta = match fs::metadata(path) {
+        Ok(m) => m,
+        Err(e) => { eprintln!("{}: cannot access '{}': {}", cmd, path.display(), e); return 1; }
+    };
+
+    use std::os::unix::fs::MetadataExt;
+    let old_uid = meta.uid();
+    let old_gid = meta.gid();
+    let new_uid = uid.unwrap_or(old_uid);
+    let new_gid = gid.unwrap_or(old_gid);
+
+    let path_c = match CString::new(path.to_string_lossy().as_bytes()) {
+        Ok(c) => c,
+        Err(_) => { eprintln!("{}: invalid path", cmd); return 1; }
+    };
+
+    extern "C" {
+        fn lchown(path: *const i8, owner: u32, group: u32) -> i32;
+    }
+
+    let ret = unsafe { lchown(path_c.as_ptr(), new_uid, new_gid) };
+    if ret != 0 {
+        let err = std::io::Error::last_os_error();
+        eprintln!("{}: changing ownership of '{}': {}", cmd, path.display(), err);
+        return 1;
+    }
+
+    if verbose || (changes && (new_uid != old_uid || new_gid != old_gid)) {
+        println!("ownership of '{}' changed to {}:{}", path.display(), new_uid, new_gid);
+    }
+
+    if recursive && meta.is_dir() {
+        if let Ok(entries) = fs::read_dir(path) {
+            let mut code = 0;
+            for entry in entries.flatten() {
+                code |= chown_path(&entry.path(), uid, gid, recursive, verbose, changes, group_only);
+            }
+            return code;
+        }
+    }
+
+    0
+}
