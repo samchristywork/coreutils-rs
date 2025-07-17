@@ -89,3 +89,17 @@ fn chmod_path(path: &Path, mode_str: &str, recursive: bool, verbose: bool, chang
 
     0
 }
+
+fn apply_mode(current: u32, mode_str: &str) -> Option<u32> {
+    // Try octal first
+    if mode_str.chars().all(|c| c.is_ascii_digit()) {
+        return u32::from_str_radix(mode_str, 8).ok();
+    }
+
+    // Symbolic mode: [ugoa]*[+-=][rwxXstugoa]*,...
+    let mut mode = current & 0o7777;
+    for clause in mode_str.split(',') {
+        mode = apply_clause(mode, current, clause)?;
+    }
+    Some((current & !0o7777) | mode)
+}
