@@ -99,3 +99,54 @@ pub fn run(args: &[String]) -> i32 {
     }
     exit_code
 }
+
+struct StatVfs {
+    fsname: String,
+    mount: String,
+    bsize: u64,
+    blocks: u64,
+    bfree: u64,
+    bavail: u64,
+    files: u64,
+    ffree: u64,
+}
+
+#[repr(C)]
+struct CStatvfs {
+    f_bsize: u64,
+    f_frsize: u64,
+    f_blocks: u64,
+    f_bfree: u64,
+    f_bavail: u64,
+    f_files: u64,
+    f_ffree: u64,
+    f_favail: u64,
+    f_fsid: u64,
+    f_flag: u64,
+    f_namemax: u64,
+    _pad: [u8; 32],
+}
+
+extern "C" {
+    fn statvfs(path: *const i8, buf: *mut CStatvfs) -> i32;
+}
+
+fn query_statvfs(path: &str) -> Option<StatVfs> {
+    let path_c = CString::new(path).ok()?;
+    let mut buf = std::mem::MaybeUninit::<CStatvfs>::uninit();
+    let ret = unsafe { statvfs(path_c.as_ptr(), buf.as_mut_ptr()) };
+    if ret != 0 { return None; }
+    let s = unsafe { buf.assume_init() };
+    let mount = find_mount(path).unwrap_or_else(|| path.to_string());
+    let fsname = find_fsname(&mount).unwrap_or_else(|| "unknown".to_string());
+    Some(StatVfs {
+        fsname,
+        mount,
+        bsize: s.f_frsize.max(s.f_bsize),
+        blocks: s.f_blocks,
+        bfree: s.f_bfree,
+        bavail: s.f_bavail,
+        files: s.f_files,
+        ffree: s.f_ffree,
+    })
+}
