@@ -168,3 +168,22 @@ fn resolve_user(name: &str) -> Option<u32> {
     let pw = unsafe { getpwnam(name_c.as_ptr()) };
     if pw.is_null() { None } else { Some(unsafe { (*pw).pw_uid }) }
 }
+
+fn resolve_group(name: &str) -> Option<u32> {
+    if let Ok(n) = name.parse::<u32>() {
+        return Some(n);
+    }
+    let name_c = CString::new(name).ok()?;
+    #[repr(C)]
+    struct Group {
+        gr_name: *const i8,
+        gr_passwd: *const i8,
+        gr_gid: u32,
+        gr_mem: *const *const i8,
+    }
+    extern "C" {
+        fn getgrnam(name: *const i8) -> *const Group;
+    }
+    let gr = unsafe { getgrnam(name_c.as_ptr()) };
+    if gr.is_null() { None } else { Some(unsafe { (*gr).gr_gid }) }
+}
