@@ -166,3 +166,14 @@ fn find_mount(path: &str) -> Option<String> {
     }
     Some(best_mount)
 }
+
+fn find_fsname(mount: &str) -> Option<String> {
+    let content = std::fs::read_to_string("/proc/mounts").ok()?;
+    for line in content.lines() {
+        let parts: Vec<&str> = line.split_whitespace().collect();
+        if parts.len() >= 2 && parts[1] == mount {
+            return Some(parts[0].to_string());
+        }
+    }
+    None
+}
