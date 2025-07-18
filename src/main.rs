@@ -1,6 +1,8 @@
 mod cp;
 mod ls;
 mod cat;
+mod chmod;
+mod chown;
 mod cmp;
 mod comm;
 mod cut;
@@ -71,6 +73,10 @@ fn main() {
         // Searching and Comparing
         "cmp" => cmp::run(cmd_args),
         "diff" => diff::run(cmd_args),
+        // Permissions and Ownership
+        "chmod" => chmod::run(cmd_args),
+        "chown" => chown::run(cmd_args),
+        "chgrp" => chown::run_chgrp(cmd_args),
         _ => {
             eprintln!("coreutils-rs: '{}' is not a supported command", cmd);
             1
