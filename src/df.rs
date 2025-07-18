@@ -177,3 +177,23 @@ fn find_fsname(mount: &str) -> Option<String> {
     }
     None
 }
+
+fn mounted_filesystems() -> Vec<(String, String)> {
+    let mut out = Vec::new();
+    let content = match std::fs::read_to_string("/proc/mounts") {
+        Ok(s) => s,
+        Err(_) => return out,
+    };
+    let mut seen = std::collections::HashSet::new();
+    for line in content.lines() {
+        let parts: Vec<&str> = line.split_whitespace().collect();
+        if parts.len() < 2 { continue; }
+        let fsname = parts[0];
+        let mount = parts[1];
+        if !fsname.starts_with('/') { continue; }
+        if seen.contains(fsname) { continue; }
+        seen.insert(fsname.to_string());
+        out.push((fsname.to_string(), mount.to_string()));
+    }
+    out
+}
