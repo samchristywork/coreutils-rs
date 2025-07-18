@@ -150,3 +150,19 @@ fn query_statvfs(path: &str) -> Option<StatVfs> {
         ffree: s.f_ffree,
     })
 }
+
+fn find_mount(path: &str) -> Option<String> {
+    let content = std::fs::read_to_string("/proc/mounts").ok()?;
+    let mut best_len = 0;
+    let mut best_mount = String::from("/");
+    for line in content.lines() {
+        let parts: Vec<&str> = line.split_whitespace().collect();
+        if parts.len() < 2 { continue; }
+        let mp = parts[1];
+        if path.starts_with(mp) && mp.len() > best_len {
+            best_len = mp.len();
+            best_mount = mp.to_string();
+        }
+    }
+    Some(best_mount)
+}
