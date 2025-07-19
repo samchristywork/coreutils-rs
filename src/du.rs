@@ -176,3 +176,22 @@ fn du_path<W: Write>(
 
     Ok(total)
 }
+
+fn print_entry<W: Write>(blocks: u64, path: &Path, human: bool, block_size: u64, out: &mut W) {
+    if human {
+        let bytes = blocks * block_size;
+        let _ = writeln!(out, "{}\t{}", human_size(bytes), path.display());
+    } else {
+        let _ = writeln!(out, "{}\t{}", blocks, path.display());
+    }
+}
+
+fn human_size(bytes: u64) -> String {
+    const UNITS: &[&str] = &["B", "K", "M", "G", "T", "P"];
+    let mut size = bytes as f64;
+    let mut idx = 0;
+    while size >= 1024.0 && idx + 1 < UNITS.len() { size /= 1024.0; idx += 1; }
+    if idx == 0 { format!("{}", bytes) }
+    else if size < 10.0 { format!("{:.1}{}", size, UNITS[idx]) }
+    else { format!("{:.0}{}", size, UNITS[idx]) }
+}
