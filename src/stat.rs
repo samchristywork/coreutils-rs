@@ -145,3 +145,42 @@ fn stat_path<W: Write>(path: &str, dereference: bool, filesystem: bool, format: 
 
     0
 }
+
+#[repr(C)]
+struct StatVfs {
+    f_bsize: i64, f_frsize: i64,
+    f_blocks: u64, f_bfree: u64, f_bavail: u64,
+    f_files: u64, f_ffree: u64, f_favail: u64,
+    f_fsid: u64, f_flag: i64, f_namemax: i64,
+    _pad: [i64; 6],
+}
+
+extern "C" { fn statvfs(path: *const i8, buf: *mut StatVfs) -> i32; }
+
+fn stat_fs<W: Write>(path: &str, format: Option<&str>, out: &mut W) -> i32 {
+
+    let path_c = match CString::new(path) { Ok(c) => c, Err(_) => return 1 };
+    let mut buf = std::mem::MaybeUninit::<StatVfs>::uninit();
+    if unsafe { statvfs(path_c.as_ptr(), buf.as_mut_ptr()) } != 0 {
+        eprintln!("stat: cannot stat '{}': {}", path, io::Error::last_os_error());
+        return 1;
+    }
+    let s = unsafe { buf.assume_init() };
+
+    if let Some(fmt) = format {
+        let line = format_statvfs(fmt, &s, path);
+        let _ = writeln!(out, "{}", line);
+        return 0;
+    }
+
+    let _ = writeln!(out, "  File: \"{}\"", path);
+    let _ = writeln!(out, "    ID: {:>16x} Namelen: {:<6} Type: linux",
+        s.f_fsid, s.f_namemax);
+    let _ = writeln!(out, " Block size: {:<10} Fundamental block size: {}",
+        s.f_bsize, s.f_frsize);
+    let _ = writeln!(out, " Blocks: Total: {:<10} Free: {:<10} Available: {}",
+        s.f_blocks, s.f_bfree, s.f_bavail);
+    let _ = writeln!(out, "  Inodes: Total: {:<10} Free: {}",
+        s.f_files, s.f_ffree);
+    0
+}
