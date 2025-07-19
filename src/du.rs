@@ -86,3 +86,93 @@ pub fn run(args: &[String]) -> i32 {
     }
     exit_code
 }
+
+fn du_path<W: Write>(
+    path: &Path,
+    depth: usize,
+    all: bool,
+    summarize: bool,
+    human: bool,
+    block_size: u64,
+    max_depth: Option<usize>,
+    one_fs: bool,
+    seen: &mut HashSet<(u64, u64)>,
+    out: &mut W,
+) -> Result<u64, ()> {
+    let meta = match fs::symlink_metadata(path) {
+        Ok(m) => m,
+        Err(e) => {
+            eprintln!("du: cannot access '{}': {}", path.display(), e);
+            return Err(());
+        }
+    };
+
+    let dev = meta.dev();
+    let ino = meta.ino();
+
+    // Skip hard-linked duplicates for non-directories
+    if !meta.is_dir() && meta.nlink() > 1 {
+        if !seen.insert((dev, ino)) {
+            return Ok(0);
+        }
+    }
+
+    // 512-byte blocks from stat, convert to our block_size
+    let file_blocks = meta.blocks() * 512;
+
+    if !meta.is_dir() {
+        let display_blocks = (file_blocks + block_size - 1) / block_size;
+        if all && !summarize && max_depth.map_or(true, |d| depth <= d) {
+            print_entry(display_blocks, path, human, block_size, out);
+        }
+        return Ok(file_blocks);
+    }
+
+    let root_dev = dev;
+    let mut total = file_blocks;
+
+    let entries = match fs::read_dir(path) {
+        Ok(e) => e,
+        Err(e) => {
+            eprintln!("du: cannot read directory '{}': {}", path.display(), e);
+            return Err(());
+        }
+    };
+
+    for entry in entries.flatten() {
+        let child = entry.path();
+        let child_meta = match fs::symlink_metadata(&child) {
+            Ok(m) => m,
+            Err(_) => continue,
+        };
+
+        if one_fs && child_meta.dev() != root_dev {
+            continue;
+        }
+
+        if child_meta.is_dir() && !child_meta.file_type().is_symlink() {
+            match du_path(&child, depth + 1, all, summarize, human, block_size, max_depth, one_fs, seen, out) {
+                Ok(n) => total += n,
+                Err(_) => {}
+            }
+        } else {
+            match du_path(&child, depth + 1, all, summarize, human, block_size, max_depth, one_fs, seen, out) {
+                Ok(n) => total += n,
+                Err(_) => {}
+            }
+        }
+    }
+
+    let display_blocks = (total + block_size - 1) / block_size;
+    let show = if summarize {
+        depth == 0
+    } else {
+        max_depth.map_or(true, |d| depth <= d)
+    };
+
+    if show {
+        print_entry(display_blocks, path, human, block_size, out);
+    }
+
+    Ok(total)
+}
