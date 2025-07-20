@@ -298,3 +298,23 @@ fn days_to_ymd(days: u64) -> (u64, u64, u64) {
 }
 
 fn is_leap(y: i64) -> bool { y % 4 == 0 && (y % 100 != 0 || y % 400 == 0) }
+
+fn uid_name(uid: u32) -> String {
+    use std::ffi::CStr;
+    #[repr(C)]
+    struct Passwd { pw_name: *const i8, _rest: [u8; 64] }
+    extern "C" { fn getpwuid(uid: u32) -> *const Passwd; }
+    let pw = unsafe { getpwuid(uid) };
+    if pw.is_null() { return uid.to_string(); }
+    unsafe { CStr::from_ptr((*pw).pw_name).to_string_lossy().into_owned() }
+}
+
+fn gid_name(gid: u32) -> String {
+    use std::ffi::CStr;
+    #[repr(C)]
+    struct Group { gr_name: *const i8, _rest: [u8; 64] }
+    extern "C" { fn getgrgid(gid: u32) -> *const Group; }
+    let gr = unsafe { getgrgid(gid) };
+    if gr.is_null() { return gid.to_string(); }
+    unsafe { CStr::from_ptr((*gr).gr_name).to_string_lossy().into_owned() }
+}
