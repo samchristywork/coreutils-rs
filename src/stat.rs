@@ -246,6 +246,19 @@ fn format_statvfs(fmt: &str, s: &StatVfs, path: &str) -> String {
     out
 }
 
+fn file_type_str(mode: u32) -> &'static str {
+    match mode & 0o170000 {
+        0o040000 => "directory",
+        0o120000 => "symbolic link",
+        0o100000 => "regular file",
+        0o060000 => "block special file",
+        0o020000 => "character special file",
+        0o010000 => "fifo",
+        0o140000 => "socket",
+        _ => "unknown",
+    }
+}
+
 fn format_mode(mode: u32) -> String {
     let ft = match mode & 0o170000 {
         0o040000 => 'd', 0o120000 => 'l', 0o100000 => '-',
