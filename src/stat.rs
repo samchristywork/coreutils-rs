@@ -184,3 +184,41 @@ fn stat_fs<W: Write>(path: &str, format: Option<&str>, out: &mut W) -> i32 {
         s.f_files, s.f_ffree);
     0
 }
+
+fn format_stat(fmt: &str, s: &StatBuf, path: &str) -> String {
+    let mut out = String::new();
+    let mut chars = fmt.chars().peekable();
+    while let Some(ch) = chars.next() {
+        if ch != '%' { out.push(ch); continue; }
+        match chars.next() {
+            Some('n') => out.push_str(path),
+            Some('s') => out.push_str(&s.st_size.to_string()),
+            Some('b') => out.push_str(&s.st_blocks.to_string()),
+            Some('B') => out.push_str(&s.st_blksize.to_string()),
+            Some('f') => out.push_str(&format!("{:x}", s.st_mode)),
+            Some('a') => out.push_str(&format!("{:o}", s.st_mode & 0o7777)),
+            Some('A') => out.push_str(&format_mode(s.st_mode)),
+            Some('i') => out.push_str(&s.st_ino.to_string()),
+            Some('h') => out.push_str(&s.st_nlink.to_string()),
+            Some('u') => out.push_str(&s.st_uid.to_string()),
+            Some('g') => out.push_str(&s.st_gid.to_string()),
+            Some('U') => out.push_str(&uid_name(s.st_uid)),
+            Some('G') => out.push_str(&gid_name(s.st_gid)),
+            Some('d') => out.push_str(&s.st_dev.to_string()),
+            Some('D') => out.push_str(&format!("{:x}", s.st_dev)),
+            Some('r') => out.push_str(&s.st_rdev.to_string()),
+            Some('R') => out.push_str(&format!("{:x}", s.st_rdev)),
+            Some('X') => out.push_str(&s.st_atime.to_string()),
+            Some('Y') => out.push_str(&s.st_mtime.to_string()),
+            Some('Z') => out.push_str(&s.st_ctime.to_string()),
+            Some('x') => out.push_str(&format_time(s.st_atime)),
+            Some('y') => out.push_str(&format_time(s.st_mtime)),
+            Some('z') => out.push_str(&format_time(s.st_ctime)),
+            Some('F') => out.push_str(file_type_str(s.st_mode)),
+            Some('%') => out.push('%'),
+            Some(c) => { out.push('%'); out.push(c); }
+            None => out.push('%'),
+        }
+    }
+    out
+}
