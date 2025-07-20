@@ -222,3 +222,26 @@ fn format_stat(fmt: &str, s: &StatBuf, path: &str) -> String {
     }
     out
 }
+
+fn format_statvfs(fmt: &str, s: &StatVfs, path: &str) -> String {
+    let mut out = String::new();
+    let mut chars = fmt.chars().peekable();
+    while let Some(ch) = chars.next() {
+        if ch != '%' { out.push(ch); continue; }
+        match chars.next() {
+            Some('n') => out.push_str(path),
+            Some('b') => out.push_str(&s.f_blocks.to_string()),
+            Some('f') => out.push_str(&s.f_bfree.to_string()),
+            Some('a') => out.push_str(&s.f_bavail.to_string()),
+            Some('s') => out.push_str(&s.f_bsize.to_string()),
+            Some('S') => out.push_str(&s.f_frsize.to_string()),
+            Some('c') => out.push_str(&s.f_files.to_string()),
+            Some('d') => out.push_str(&s.f_ffree.to_string()),
+            Some('l') => out.push_str(&s.f_namemax.to_string()),
+            Some('%') => out.push('%'),
+            Some(c) => { out.push('%'); out.push(c); }
+            None => out.push('%'),
+        }
+    }
+    out
+}
