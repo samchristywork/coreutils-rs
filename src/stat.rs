@@ -284,3 +284,17 @@ fn format_time(secs: i64) -> String {
     format!("{:04}-{:02}-{:02} {:02}:{:02}:{:02}.000000000 +0000",
         y, mo, d, hr % 24, min % 60, s % 60)
 }
+
+fn days_to_ymd(days: u64) -> (u64, u64, u64) {
+    let mut r = days as i64; let mut y = 1970i64;
+    loop {
+        let dy = if is_leap(y) { 366 } else { 365 };
+        if r < dy { break; } r -= dy; y += 1;
+    }
+    let md: [i64; 12] = [31, if is_leap(y) { 29 } else { 28 }, 31,30,31,30,31,31,30,31,30,31];
+    let mut mo = 1u64;
+    for &m in &md { if r < m { break; } r -= m; mo += 1; }
+    (y as u64, mo, r as u64 + 1)
+}
+
+fn is_leap(y: i64) -> bool { y % 4 == 0 && (y % 100 != 0 || y % 400 == 0) }
