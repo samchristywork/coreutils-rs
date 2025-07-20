@@ -245,3 +245,29 @@ fn format_statvfs(fmt: &str, s: &StatVfs, path: &str) -> String {
     }
     out
 }
+
+fn format_mode(mode: u32) -> String {
+    let ft = match mode & 0o170000 {
+        0o040000 => 'd', 0o120000 => 'l', 0o100000 => '-',
+        0o060000 => 'b', 0o020000 => 'c', 0o010000 => 'p',
+        0o140000 => 's', _ => '?',
+    };
+    let rwx = [(0o400,'r'),(0o200,'w'),(0o100,'x'),
+               (0o040,'r'),(0o020,'w'),(0o010,'x'),
+               (0o004,'r'),(0o002,'w'),(0o001,'x')];
+    let mut s = String::with_capacity(10);
+    s.push(ft);
+    for &(bit, ch) in &rwx { s.push(if mode & bit != 0 { ch } else { '-' }); }
+    s
+}
+
+fn format_time(secs: i64) -> String {
+    if secs < 0 { return "1970-01-01 00:00:00.000000000 +0000".to_string(); }
+    let s = secs as u64;
+    let min = s / 60; let hr = min / 60; let days = hr / 24;
+    let (y, mo, d) = days_to_ymd(days);
+    const MONTHS: [&str; 12] = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+    let _ = MONTHS;
+    format!("{:04}-{:02}-{:02} {:02}:{:02}:{:02}.000000000 +0000",
+        y, mo, d, hr % 24, min % 60, s % 60)
+}
