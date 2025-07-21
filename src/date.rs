@@ -46,3 +46,38 @@ pub fn run(args: &[String]) -> i32 {
     let _ = writeln!(w, "{}", out);
     0
 }
+
+#[repr(C)]
+struct Timespec {
+    tv_sec: i64,
+    tv_nsec: i64,
+}
+
+#[repr(C)]
+struct Tm {
+    tm_sec: i32,
+    tm_min: i32,
+    tm_hour: i32,
+    tm_mday: i32,
+    tm_mon: i32,
+    tm_year: i32,
+    tm_wday: i32,
+    tm_yday: i32,
+    tm_isdst: i32,
+    tm_gmtoff: i64,
+    tm_zone: *const i8,
+}
+
+extern "C" {
+    fn clock_gettime(clk_id: i32, tp: *mut Timespec) -> i32;
+    fn localtime_r(timep: *const i64, result: *mut Tm) -> *mut Tm;
+    fn gmtime_r(timep: *const i64, result: *mut Tm) -> *mut Tm;
+    fn mktime(tm: *mut Tm) -> i64;
+    fn settimeofday(tv: *const Timeval, tz: *const u8) -> i32;
+}
+
+#[repr(C)]
+struct Timeval {
+    tv_sec: i64,
+    tv_usec: i64,
+}
