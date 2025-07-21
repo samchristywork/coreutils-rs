@@ -6,10 +6,14 @@ mod chown;
 mod cmp;
 mod comm;
 mod cut;
+mod df;
 mod diff;
+mod du;
 mod join;
 mod paste;
 mod sort;
+mod stat;
+mod sync;
 mod tr;
 mod uniq;
 mod head;
@@ -77,6 +81,11 @@ fn main() {
         "chmod" => chmod::run(cmd_args),
         "chown" => chown::run(cmd_args),
         "chgrp" => chown::run_chgrp(cmd_args),
+        // Disk and Filesystem
+        "df" => df::run(cmd_args),
+        "du" => du::run(cmd_args),
+        "stat" => stat::run(cmd_args),
+        "sync" => sync::run(cmd_args),
         _ => {
             eprintln!("coreutils-rs: '{}' is not a supported command", cmd);
             1
