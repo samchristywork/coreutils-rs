@@ -81,3 +81,23 @@ struct Timeval {
     tv_sec: i64,
     tv_usec: i64,
 }
+
+fn get_time() -> i64 {
+    let mut ts = Timespec { tv_sec: 0, tv_nsec: 0 };
+    unsafe { clock_gettime(0, &mut ts) };
+    ts.tv_sec
+}
+
+fn get_tm(secs: i64, utc: bool) -> Tm {
+    let mut tm = Tm {
+        tm_sec: 0, tm_min: 0, tm_hour: 0,
+        tm_mday: 0, tm_mon: 0, tm_year: 0,
+        tm_wday: 0, tm_yday: 0, tm_isdst: 0,
+        tm_gmtoff: 0, tm_zone: std::ptr::null(),
+    };
+    unsafe {
+        if utc { gmtime_r(&secs, &mut tm); }
+        else    { localtime_r(&secs, &mut tm); }
+    }
+    tm
+}
