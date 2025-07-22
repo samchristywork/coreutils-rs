@@ -206,3 +206,54 @@ fn format_date(fmt: &str, secs: i64, utc: bool) -> String {
     }
     out
 }
+
+fn set_system_date(s: &str) -> i32 {
+    // Parse MMDDhhmm[[CC]YY][.ss]
+    let (main, secs_part) = if let Some(pos) = s.rfind('.') {
+        (&s[..pos], Some(&s[pos+1..]))
+    } else {
+        (s, None)
+    };
+
+    let sec: i32 = if let Some(sp) = secs_part {
+        match sp.parse() { Ok(n) => n, Err(_) => { eprintln!("date: invalid date '{}'", s); return 1; } }
+    } else { 0 };
+
+    let digits: Vec<char> = main.chars().collect();
+    if digits.len() < 8 {
+        eprintln!("date: invalid date '{}'", s);
+        return 1;
+    }
+
+    let parse2 = |a: char, b: char| -> i32 { (a as i32 - '0' as i32) * 10 + (b as i32 - '0' as i32) };
+
+    let mon  = parse2(digits[0], digits[1]) - 1;
+    let mday = parse2(digits[2], digits[3]);
+    let hour = parse2(digits[4], digits[5]);
+    let min  = parse2(digits[6], digits[7]);
+    let year = match digits.len() {
+        8  => { let t = get_time(); let tm = get_tm(t, false); tm.tm_year }
+        10 => { let y = parse2(digits[8], digits[9]) as i32; if y >= 69 { y } else { y + 100 } }
+        12 => { parse2(digits[8], digits[9]) as i32 * 100 + parse2(digits[10], digits[11]) as i32 - 1900 }
+        _  => { eprintln!("date: invalid date '{}'", s); return 1; }
+    };
+
+    let mut tm = Tm {
+        tm_sec: sec, tm_min: min, tm_hour: hour,
+        tm_mday: mday, tm_mon: mon, tm_year: year,
+        tm_wday: 0, tm_yday: 0, tm_isdst: -1,
+        tm_gmtoff: 0, tm_zone: std::ptr::null(),
+    };
+    let epoch = unsafe { mktime(&mut tm) };
+    if epoch < 0 {
+        eprintln!("date: invalid date '{}'", s);
+        return 1;
+    }
+    let tv = Timeval { tv_sec: epoch, tv_usec: 0 };
+    let ret = unsafe { settimeofday(&tv, std::ptr::null()) };
+    if ret != 0 {
+        eprintln!("date: cannot set date: {}", std::io::Error::last_os_error());
+        return 1;
+    }
+    0
+}
