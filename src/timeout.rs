@@ -102,3 +102,56 @@ pub fn run(args: &[String]) -> i32 {
 
     run_with_timeout(cmd_name, cmd_args, duration_secs, signal, preserve_status)
 }
+
+fn run_with_timeout(cmd_name: &str, cmd_args: &[String], duration_secs: f64, signal: i32, preserve_status: bool) -> i32 {
+    let mut child = match Command::new(cmd_name).args(cmd_args).spawn() {
+        Ok(c) => c,
+        Err(e) => { eprintln!("timeout: cannot run '{}': {}", cmd_name, e); return 126; }
+    };
+
+    let pid = child.id();
+    let timeout_ns = (duration_secs * 1_000_000_000.0) as u64;
+
+    // Poll every 10ms until timeout or child exits
+    let poll_ns: u64 = 10_000_000;
+    let mut elapsed: u64 = 0;
+    let timed_out;
+
+    #[repr(C)]
+    struct Timespec { tv_sec: u64, tv_nsec: u32 }
+    extern "C" {
+        fn nanosleep(req: *const Timespec, rem: *mut Timespec) -> i32;
+        fn kill(pid: i32, sig: i32) -> i32;
+    }
+
+    loop {
+        match child.try_wait() {
+            Ok(Some(_)) => { timed_out = false; break; }
+            Ok(None) => {}
+            Err(_) => { timed_out = false; break; }
+        }
+        if elapsed >= timeout_ns {
+            unsafe { kill(pid as i32, signal) };
+            timed_out = true;
+            break;
+        }
+        let req = Timespec { tv_sec: 0, tv_nsec: poll_ns as u32 };
+        let mut rem = Timespec { tv_sec: 0, tv_nsec: 0 };
+        unsafe { nanosleep(&req, &mut rem) };
+        elapsed += poll_ns;
+    }
+
+    let status = match child.wait() {
+        Ok(s) => s,
+        Err(_) => return 1,
+    };
+
+    if timed_out {
+        if preserve_status {
+            return exit_code_from_status(&status);
+        }
+        return 124;
+    }
+
+    exit_code_from_status(&status)
+}
