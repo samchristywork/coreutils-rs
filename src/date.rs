@@ -101,3 +101,108 @@ fn get_tm(secs: i64, utc: bool) -> Tm {
     }
     tm
 }
+
+fn format_date(fmt: &str, secs: i64, utc: bool) -> String {
+    let tm = get_tm(secs, utc);
+    let mut out = String::new();
+    let mut chars = fmt.chars().peekable();
+
+    const WEEKDAYS: [&str; 7] = ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
+    const WEEKDAYS_ABB: [&str; 7] = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
+    const MONTHS: [&str; 12] = ["January","February","March","April","May","June",
+                                 "July","August","September","October","November","December"];
+    const MONTHS_ABB: [&str; 12] = ["Jan","Feb","Mar","Apr","May","Jun",
+                                     "Jul","Aug","Sep","Oct","Nov","Dec"];
+
+    while let Some(ch) = chars.next() {
+        if ch != '%' { out.push(ch); continue; }
+        match chars.next() {
+            Some('Y') => out.push_str(&format!("{:04}", tm.tm_year + 1900)),
+            Some('y') => out.push_str(&format!("{:02}", (tm.tm_year + 1900) % 100)),
+            Some('m') => out.push_str(&format!("{:02}", tm.tm_mon + 1)),
+            Some('d') => out.push_str(&format!("{:02}", tm.tm_mday)),
+            Some('e') => out.push_str(&format!("{:2}", tm.tm_mday)),
+            Some('H') => out.push_str(&format!("{:02}", tm.tm_hour)),
+            Some('M') => out.push_str(&format!("{:02}", tm.tm_min)),
+            Some('S') => out.push_str(&format!("{:02}", tm.tm_sec)),
+            Some('A') => {
+                let w = tm.tm_wday.max(0).min(6) as usize;
+                out.push_str(WEEKDAYS[w]);
+            }
+            Some('a') => {
+                let w = tm.tm_wday.max(0).min(6) as usize;
+                out.push_str(WEEKDAYS_ABB[w]);
+            }
+            Some('B') => {
+                let m = tm.tm_mon.max(0).min(11) as usize;
+                out.push_str(MONTHS[m]);
+            }
+            Some('b') | Some('h') => {
+                let m = tm.tm_mon.max(0).min(11) as usize;
+                out.push_str(MONTHS_ABB[m]);
+            }
+            Some('j') => out.push_str(&format!("{:03}", tm.tm_yday + 1)),
+            Some('u') => {
+                let w = if tm.tm_wday == 0 { 7 } else { tm.tm_wday };
+                out.push_str(&w.to_string());
+            }
+            Some('w') => out.push_str(&tm.tm_wday.to_string()),
+            Some('n') => out.push('\n'),
+            Some('t') => out.push('\t'),
+            Some('%') => out.push('%'),
+            Some('s') => out.push_str(&secs.to_string()),
+            Some('Z') => {
+                if utc {
+                    out.push_str("UTC");
+                } else if !tm.tm_zone.is_null() {
+                    use std::ffi::CStr;
+                    let tz = unsafe { CStr::from_ptr(tm.tm_zone).to_string_lossy() };
+                    out.push_str(&tz);
+                }
+            }
+            Some('z') => {
+                let off = tm.tm_gmtoff;
+                let sign = if off >= 0 { '+' } else { '-' };
+                let off = off.abs();
+                out.push_str(&format!("{}{:02}{:02}", sign, off / 3600, (off % 3600) / 60));
+            }
+            Some('p') => out.push_str(if tm.tm_hour < 12 { "AM" } else { "PM" }),
+            Some('P') => out.push_str(if tm.tm_hour < 12 { "am" } else { "pm" }),
+            Some('I') => out.push_str(&format!("{:02}", if tm.tm_hour % 12 == 0 { 12 } else { tm.tm_hour % 12 })),
+            Some('l') => out.push_str(&format!("{:2}", if tm.tm_hour % 12 == 0 { 12 } else { tm.tm_hour % 12 })),
+            Some('D') => {
+                out.push_str(&format!("{:02}/{:02}/{:02}",
+                    tm.tm_mon + 1, tm.tm_mday, (tm.tm_year + 1900) % 100));
+            }
+            Some('F') => {
+                out.push_str(&format!("{:04}-{:02}-{:02}",
+                    tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday));
+            }
+            Some('T') => {
+                out.push_str(&format!("{:02}:{:02}:{:02}",
+                    tm.tm_hour, tm.tm_min, tm.tm_sec));
+            }
+            Some('R') => {
+                out.push_str(&format!("{:02}:{:02}", tm.tm_hour, tm.tm_min));
+            }
+            Some('c') => {
+                let w = tm.tm_wday.max(0).min(6) as usize;
+                let m = tm.tm_mon.max(0).min(11) as usize;
+                out.push_str(&format!("{} {} {:2} {:02}:{:02}:{:02} {:04}",
+                    WEEKDAYS_ABB[w], MONTHS_ABB[m], tm.tm_mday,
+                    tm.tm_hour, tm.tm_min, tm.tm_sec, tm.tm_year + 1900));
+            }
+            Some('x') => {
+                out.push_str(&format!("{:02}/{:02}/{:02}",
+                    tm.tm_mon + 1, tm.tm_mday, (tm.tm_year + 1900) % 100));
+            }
+            Some('X') => {
+                out.push_str(&format!("{:02}:{:02}:{:02}",
+                    tm.tm_hour, tm.tm_min, tm.tm_sec));
+            }
+            Some(c) => { out.push('%'); out.push(c); }
+            None => out.push('%'),
+        }
+    }
+    out
+}
