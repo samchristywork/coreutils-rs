@@ -28,3 +28,23 @@ pub fn run(args: &[String]) -> i32 {
     unsafe { nanosleep(&req, &mut rem) };
     0
 }
+
+fn parse_duration(s: &str) -> Option<u128> {
+    let (num_str, suffix) = split_suffix(s);
+    let val: f64 = num_str.parse().ok()?;
+    if val < 0.0 { return None; }
+    let ns_per_unit: f64 = match suffix {
+        "s" | "" => 1_000_000_000.0,
+        "m"      => 60.0 * 1_000_000_000.0,
+        "h"      => 3600.0 * 1_000_000_000.0,
+        "d"      => 86400.0 * 1_000_000_000.0,
+        _        => return None,
+    };
+    Some((val * ns_per_unit) as u128)
+}
+
+fn split_suffix(s: &str) -> (&str, &str) {
+    let trimmed = s.trim_end_matches(|c: char| c.is_alphabetic());
+    let suffix = &s[trimmed.len()..];
+    (trimmed, suffix)
+}
