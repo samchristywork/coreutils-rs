@@ -27,6 +27,8 @@ fn parse_int(s: &str) -> Result<i64, String> {
 //   or:  and ( '|' and )*
 //   and: cmp ( '&' cmp )*
 //   cmp: add ( ('='|'!='|'<'|'<='|'>'|'>=') add )?
+//   add: mul ( ('+'|'-') mul )*
+//   mul: match ( ('*'|'/'|'%') match )*
 
 fn parse_or<'a>(tok: &'a [&'a str]) -> Result<(String, &'a [&'a str]), String> {
     let (mut lhs, mut rest) = parse_and(tok)?;
@@ -65,4 +67,38 @@ fn cmp_vals(a: &str, op: &str, b: &str) -> bool {
     } else {
         match op { "=" => a==b, "!=" => a!=b, "<" => a<b, "<=" => a<=b, ">" => a>b, ">=" => a>=b, _ => false }
     }
+}
+
+fn parse_add<'a>(tok: &'a [&'a str]) -> Result<(String, &'a [&'a str]), String> {
+    let (mut lhs, mut rest) = parse_mul(tok)?;
+    while let Some(&op) = rest.first() {
+        if op != "+" && op != "-" { break; }
+        let (rhs, r) = parse_mul(&rest[1..])?;
+        let (a, b) = (parse_int(&lhs)?, parse_int(&rhs)?);
+        lhs = match op {
+            "+" => a.checked_add(b).ok_or("integer overflow")?.to_string(),
+            "-" => a.checked_sub(b).ok_or("integer overflow")?.to_string(),
+            _   => unreachable!(),
+        };
+        rest = r;
+    }
+    Ok((lhs, rest))
+}
+
+fn parse_mul<'a>(tok: &'a [&'a str]) -> Result<(String, &'a [&'a str]), String> {
+    let (mut lhs, mut rest) = parse_match(tok)?;
+    while let Some(&op) = rest.first() {
+        if op != "*" && op != "/" && op != "%" { break; }
+        let (rhs, r) = parse_match(&rest[1..])?;
+        let (a, b) = (parse_int(&lhs)?, parse_int(&rhs)?);
+        if (op == "/" || op == "%") && b == 0 { return Err("division by zero".to_string()); }
+        lhs = match op {
+            "*" => a.checked_mul(b).ok_or("integer overflow")?.to_string(),
+            "/" => (a / b).to_string(),
+            "%" => (a % b).to_string(),
+            _   => unreachable!(),
+        };
+        rest = r;
+    }
+    Ok((lhs, rest))
 }
