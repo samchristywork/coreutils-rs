@@ -16,3 +16,33 @@ pub fn run(args: &[String]) -> i32 {
         Err(e) => { eprintln!("expr: {}", e); 2 }
     }
 }
+
+fn is_null(s: &str) -> bool { s == "0" || s.is_empty() }
+
+fn parse_int(s: &str) -> Result<i64, String> {
+    s.trim().parse::<i64>().map_err(|_| format!("non-integer argument '{}'", s))
+}
+
+// Grammar (lowest to highest precedence):
+//   or:  and ( '|' and )*
+//   and: cmp ( '&' cmp )*
+
+fn parse_or<'a>(tok: &'a [&'a str]) -> Result<(String, &'a [&'a str]), String> {
+    let (mut lhs, mut rest) = parse_and(tok)?;
+    while rest.first() == Some(&"|") {
+        let (rhs, r) = parse_and(&rest[1..])?;
+        lhs = if !is_null(&lhs) { lhs } else if !is_null(&rhs) { rhs } else { "0".to_string() };
+        rest = r;
+    }
+    Ok((lhs, rest))
+}
+
+fn parse_and<'a>(tok: &'a [&'a str]) -> Result<(String, &'a [&'a str]), String> {
+    let (mut lhs, mut rest) = parse_cmp(tok)?;
+    while rest.first() == Some(&"&") {
+        let (rhs, r) = parse_cmp(&rest[1..])?;
+        lhs = if !is_null(&lhs) && !is_null(&rhs) { lhs } else { "0".to_string() };
+        rest = r;
+    }
+    Ok((lhs, rest))
+}
