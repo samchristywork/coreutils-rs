@@ -155,3 +155,37 @@ fn run_with_timeout(cmd_name: &str, cmd_args: &[String], duration_secs: f64, sig
 
     exit_code_from_status(&status)
 }
+
+fn parse_duration(s: &str) -> Option<f64> {
+    let trimmed = s.trim_end_matches(|c: char| c.is_alphabetic());
+    let suffix = &s[trimmed.len()..];
+    let val: f64 = trimmed.parse().ok()?;
+    if val < 0.0 { return None; }
+    let mult = match suffix {
+        "s" | "" => 1.0,
+        "m"      => 60.0,
+        "h"      => 3600.0,
+        "d"      => 86400.0,
+        _        => return None,
+    };
+    Some(val * mult)
+}
+
+fn parse_signal(s: &str) -> Option<i32> {
+    // Try numeric first
+    if let Ok(n) = s.parse::<i32>() { return Some(n); }
+    // Strip SIG prefix if present
+    let name = s.strip_prefix("SIG").unwrap_or(s).to_uppercase();
+    let sig = match name.as_str() {
+        "HUP"  => 1,  "INT"  => 2,  "QUIT" => 3,  "ILL"  => 4,
+        "TRAP" => 5,  "ABRT" => 6,  "BUS"  => 7,  "FPE"  => 8,
+        "KILL" => 9,  "USR1" => 10, "SEGV" => 11, "USR2" => 12,
+        "PIPE" => 13, "ALRM" => 14, "TERM" => 15, "CHLD" => 17,
+        "CONT" => 18, "STOP" => 19, "TSTP" => 20, "TTIN" => 21,
+        "TTOU" => 22, "URG"  => 23, "XCPU" => 24, "XFSZ" => 25,
+        "VTALRM"=> 26,"PROF" => 27, "WINCH"=> 28, "IO"   => 29,
+        "PWR"  => 30, "SYS"  => 31,
+        _ => return None,
+    };
+    Some(sig)
+}
