@@ -26,6 +26,7 @@ fn parse_int(s: &str) -> Result<i64, String> {
 // Grammar (lowest to highest precedence):
 //   or:  and ( '|' and )*
 //   and: cmp ( '&' cmp )*
+//   cmp: add ( ('='|'!='|'<'|'<='|'>'|'>=') add )?
 
 fn parse_or<'a>(tok: &'a [&'a str]) -> Result<(String, &'a [&'a str]), String> {
     let (mut lhs, mut rest) = parse_and(tok)?;
@@ -45,4 +46,23 @@ fn parse_and<'a>(tok: &'a [&'a str]) -> Result<(String, &'a [&'a str]), String> 
         rest = r;
     }
     Ok((lhs, rest))
+}
+
+fn parse_cmp<'a>(tok: &'a [&'a str]) -> Result<(String, &'a [&'a str]), String> {
+    let (lhs, rest) = parse_add(tok)?;
+    let op = match rest.first() {
+        Some(&o) if matches!(o, "=" | "!=" | "<" | "<=" | ">" | ">=") => o,
+        _ => return Ok((lhs, rest)),
+    };
+    let (rhs, rest) = parse_add(&rest[1..])?;
+    let b = cmp_vals(&lhs, op, &rhs);
+    Ok((if b { "1" } else { "0" }.to_string(), rest))
+}
+
+fn cmp_vals(a: &str, op: &str, b: &str) -> bool {
+    if let (Ok(x), Ok(y)) = (a.parse::<i64>(), b.parse::<i64>()) {
+        match op { "=" => x==y, "!=" => x!=y, "<" => x<y, "<=" => x<=y, ">" => x>y, ">=" => x>=y, _ => false }
+    } else {
+        match op { "=" => a==b, "!=" => a!=b, "<" => a<b, "<=" => a<=b, ">" => a>b, ">=" => a>=b, _ => false }
+    }
 }
