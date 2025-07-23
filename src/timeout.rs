@@ -156,6 +156,17 @@ fn run_with_timeout(cmd_name: &str, cmd_args: &[String], duration_secs: f64, sig
     exit_code_from_status(&status)
 }
 
+fn exit_code_from_status(status: &std::process::ExitStatus) -> i32 {
+    #[cfg(unix)]
+    {
+        use std::os::unix::process::ExitStatusExt;
+        if let Some(sig) = status.signal() {
+            return 128 + sig;
+        }
+    }
+    status.code().unwrap_or(1)
+}
+
 fn parse_duration(s: &str) -> Option<f64> {
     let trimmed = s.trim_end_matches(|c: char| c.is_alphabetic());
     let suffix = &s[trimmed.len()..];
