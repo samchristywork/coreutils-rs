@@ -1,5 +1,8 @@
 mod cp;
+mod date;
 mod ls;
+mod sleep;
+mod timeout;
 mod cat;
 mod chmod;
 mod chown;
@@ -86,6 +89,10 @@ fn main() {
         "du" => du::run(cmd_args),
         "stat" => stat::run(cmd_args),
         "sync" => sync::run(cmd_args),
+        // Date and Time
+        "date" => date::run(cmd_args),
+        "sleep" => sleep::run(cmd_args),
+        "timeout" => timeout::run(cmd_args),
         _ => {
             eprintln!("coreutils-rs: '{}' is not a supported command", cmd);
             1
