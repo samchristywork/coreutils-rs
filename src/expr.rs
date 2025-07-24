@@ -29,6 +29,8 @@ fn parse_int(s: &str) -> Result<i64, String> {
 //   cmp: add ( ('='|'!='|'<'|'<='|'>'|'>=') add )?
 //   add: mul ( ('+'|'-') mul )*
 //   mul: match ( ('*'|'/'|'%') match )*
+//   match: primary ( ':' primary )*
+//   primary: '(' or ')' | function | token
 
 fn parse_or<'a>(tok: &'a [&'a str]) -> Result<(String, &'a [&'a str]), String> {
     let (mut lhs, mut rest) = parse_and(tok)?;
@@ -101,4 +103,60 @@ fn parse_mul<'a>(tok: &'a [&'a str]) -> Result<(String, &'a [&'a str]), String> 
         rest = r;
     }
     Ok((lhs, rest))
+}
+
+fn parse_match<'a>(tok: &'a [&'a str]) -> Result<(String, &'a [&'a str]), String> {
+    let (mut lhs, mut rest) = parse_primary(tok)?;
+    while rest.first() == Some(&":") {
+        let (rhs, r) = parse_primary(&rest[1..])?;
+        lhs = do_match(&lhs, &rhs);
+        rest = r;
+    }
+    Ok((lhs, rest))
+}
+
+fn parse_primary<'a>(tok: &'a [&'a str]) -> Result<(String, &'a [&'a str]), String> {
+    if tok.is_empty() { return Err("missing operand".to_string()); }
+    if tok[0] == "(" {
+        let (val, rest) = parse_or(&tok[1..])?;
+        if rest.first() != Some(&")") { return Err("expected ')'".to_string()); }
+        return Ok((val, &rest[1..]));
+    }
+    match tok[0] {
+        "length" => {
+            let (val, rest) = parse_primary(&tok[1..])?;
+            Ok((val.len().to_string(), rest))
+        }
+        "index" => {
+            let (s, rest) = parse_primary(&tok[1..])?;
+            let (chars, rest) = parse_primary(rest)?;
+            let idx = s.chars().enumerate()
+                .find(|(_, c)| chars.contains(*c))
+                .map(|(i, _)| i + 1)
+                .unwrap_or(0);
+            Ok((idx.to_string(), rest))
+        }
+        "substr" => {
+            let (s, rest) = parse_primary(&tok[1..])?;
+            let (pos_s, rest) = parse_primary(rest)?;
+            let (len_s, rest) = parse_primary(rest)?;
+            let pos: i64 = pos_s.parse().unwrap_or(0);
+            let len: i64 = len_s.parse().unwrap_or(0);
+            let result = if pos < 1 || len < 1 {
+                String::new()
+            } else {
+                let v: Vec<char> = s.chars().collect();
+                let start = (pos as usize - 1).min(v.len());
+                let end = (start + len as usize).min(v.len());
+                v[start..end].iter().collect()
+            };
+            Ok((result, rest))
+        }
+        "match" => {
+            let (s, rest) = parse_primary(&tok[1..])?;
+            let (pat, rest) = parse_primary(rest)?;
+            Ok((do_match(&s, &pat), rest))
+        }
+        _ => Ok((tok[0].to_string(), &tok[1..])),
+    }
 }
