@@ -76,3 +76,24 @@ fn factorize(mut n: u64) -> Vec<u64> {
     factors.sort_unstable();
     factors
 }
+
+fn is_prime(n: u64) -> bool {
+    if n < 2 { return false; }
+    if n == 2 || n == 3 || n == 5 || n == 7 { return true; }
+    if n % 2 == 0 || n % 3 == 0 { return false; }
+    // Miller-Rabin with deterministic witnesses for n < 3,317,044,064,679,887,385,961,981
+    let witnesses: &[u64] = &[2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37];
+    let (mut d, mut r) = (n - 1, 0u32);
+    while d % 2 == 0 { d /= 2; r += 1; }
+    'outer: for &a in witnesses {
+        if a >= n { continue; }
+        let mut x = mod_pow(a, d, n);
+        if x == 1 || x == n - 1 { continue; }
+        for _ in 0..r - 1 {
+            x = mul_mod(x, x, n);
+            if x == n - 1 { continue 'outer; }
+        }
+        return false;
+    }
+    true
+}
