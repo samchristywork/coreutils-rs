@@ -25,3 +25,15 @@ pub fn run(args: &[String]) -> i32 {
     }
     exit_code
 }
+
+fn factor_one<W: Write>(s: &str, out: &mut W) -> i32 {
+    let n: u64 = match s.trim().parse() {
+        Ok(v) => v,
+        Err(_) => { eprintln!("factor: '{}' is not a valid positive integer", s); return 1; }
+    };
+    let factors = factorize(n);
+    let _ = write!(out, "{}:", n);
+    for f in &factors { let _ = write!(out, " {}", f); }
+    let _ = writeln!(out);
+    0
+}
