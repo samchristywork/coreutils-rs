@@ -160,3 +160,137 @@ fn parse_primary<'a>(tok: &'a [&'a str]) -> Result<(String, &'a [&'a str]), Stri
         _ => Ok((tok[0].to_string(), &tok[1..])),
     }
 }
+
+// Simple BRE-style regex match anchored at start.
+// Supports: . * [] [^] \(\) ^ $
+// Returns the capture group string if present, else the match length.
+fn do_match(s: &str, pattern: &str) -> String {
+    let anchored = if pattern.starts_with('^') { pattern.to_string() } else { format!("^{}", pattern) };
+    let has_group = anchored.contains("\\(");
+    let s_chars: Vec<char> = s.chars().collect();
+    let pat_chars: Vec<char> = anchored.chars().collect();
+
+    if let Some((end, cap)) = bre_match(&s_chars, 0, &pat_chars, 0) {
+        if has_group {
+            if let Some((gs, ge)) = cap { s_chars[gs..ge].iter().collect() } else { String::new() }
+        } else {
+            end.to_string()
+        }
+    } else {
+        if has_group { String::new() } else { "0".to_string() }
+    }
+}
+
+// Returns (match_end_index, Option<(group_start, group_end)>)
+fn bre_match(s: &[char], si: usize, pat: &[char], pi: usize) -> Option<(usize, Option<(usize, usize)>)> {
+    bre_rec(s, si, pat, pi, None, None)
+}
+
+fn bre_rec(
+    s: &[char], si: usize,
+    pat: &[char], pi: usize,
+    grp_start: Option<usize>,
+    grp_end: Option<usize>,
+) -> Option<(usize, Option<(usize, usize)>)> {
+    if pi >= pat.len() {
+        return Some((si, grp_start.zip(grp_end).or_else(|| grp_start.map(|g| (g, si)))));
+    }
+
+    // Parse one atom from pat[pi..]
+    // Returns (atom_end_in_pat, is_star)
+    let (atom_end, atom_type) = parse_atom(pat, pi)?;
+    let is_star = pat.get(atom_end) == Some(&'*') && atom_type != AtomType::GroupStart && atom_type != AtomType::GroupEnd;
+    let next_pi = if is_star { atom_end + 1 } else { atom_end };
+
+    match atom_type {
+        AtomType::Anchor => bre_rec(s, si, pat, next_pi, grp_start, grp_end),
+        AtomType::End => {
+            if si == s.len() { bre_rec(s, si, pat, next_pi, grp_start, grp_end) } else { None }
+        }
+        AtomType::GroupStart => {
+            bre_rec(s, si, pat, next_pi, Some(si), grp_end)
+        }
+        AtomType::GroupEnd => {
+            bre_rec(s, si, pat, next_pi, grp_start, Some(si))
+        }
+        _ => {
+            if is_star {
+                // Greedy: try matching as many as possible, then backtrack
+                let mut positions = vec![si];
+                let mut cur = si;
+                loop {
+                    match match_one(&atom_type, s, cur) {
+                        Some(next) => { positions.push(next); cur = next; }
+                        None => break,
+                    }
+                }
+                for &pos in positions.iter().rev() {
+                    if let Some(r) = bre_rec(s, pos, pat, next_pi, grp_start, grp_end) {
+                        return Some(r);
+                    }
+                }
+                None
+            } else {
+                let next_si = match_one(&atom_type, s, si)?;
+                bre_rec(s, next_si, pat, next_pi, grp_start, grp_end)
+            }
+        }
+    }
+}
+
+#[derive(PartialEq)]
+enum AtomType {
+    Any,
+    Literal(char),
+    Class(Vec<char>, bool), // chars, negated
+    GroupStart,
+    GroupEnd,
+    Anchor, // ^ at start
+    End,    // $ at end
+}
+
+// Returns (pat index after atom, AtomType)
+fn parse_atom(pat: &[char], pi: usize) -> Option<(usize, AtomType)> {
+    match pat[pi] {
+        '^' => Some((pi + 1, AtomType::Anchor)),
+        '$' => Some((pi + 1, AtomType::End)),
+        '.' => Some((pi + 1, AtomType::Any)),
+        '*' => Some((pi + 1, AtomType::Literal('*'))), // unattached * is literal
+        '\\' if pi + 1 < pat.len() => match pat[pi + 1] {
+            '(' => Some((pi + 2, AtomType::GroupStart)),
+            ')' => Some((pi + 2, AtomType::GroupEnd)),
+            c   => Some((pi + 2, AtomType::Literal(c))),
+        },
+        '[' => {
+            let mut i = pi + 1;
+            let negated = i < pat.len() && pat[i] == '^';
+            if negated { i += 1; }
+            let mut chars = Vec::new();
+            if i < pat.len() && pat[i] == ']' { chars.push(']'); i += 1; }
+            while i < pat.len() && pat[i] != ']' {
+                if i + 2 < pat.len() && pat[i + 1] == '-' && pat[i + 2] != ']' {
+                    let lo = pat[i]; let hi = pat[i + 2];
+                    for c in lo..=hi { chars.push(c); }
+                    i += 3;
+                } else {
+                    chars.push(pat[i]);
+                    i += 1;
+                }
+            }
+            if i < pat.len() { i += 1; } // consume ']'
+            Some((i, AtomType::Class(chars, negated)))
+        }
+        c => Some((pi + 1, AtomType::Literal(c))),
+    }
+}
+
+fn match_one(atom: &AtomType, s: &[char], si: usize) -> Option<usize> {
+    if si >= s.len() { return None; }
+    let ok = match atom {
+        AtomType::Any => true,
+        AtomType::Literal(c) => s[si] == *c,
+        AtomType::Class(chars, negated) => chars.contains(&s[si]) != *negated,
+        _ => return None,
+    };
+    if ok { Some(si + 1) } else { None }
+}
