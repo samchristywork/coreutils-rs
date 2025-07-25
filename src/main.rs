@@ -1,6 +1,9 @@
 mod cp;
 mod date;
+mod expr;
+mod factor;
 mod ls;
+mod seq;
 mod sleep;
 mod timeout;
 mod cat;
@@ -93,6 +96,10 @@ fn main() {
         "date" => date::run(cmd_args),
         "sleep" => sleep::run(cmd_args),
         "timeout" => timeout::run(cmd_args),
+        // Math and Sequences
+        "expr" => expr::run(cmd_args),
+        "seq" => seq::run(cmd_args),
+        "factor" => factor::run(cmd_args),
         _ => {
             eprintln!("coreutils-rs: '{}' is not a supported command", cmd);
             1
