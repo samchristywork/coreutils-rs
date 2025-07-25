@@ -133,3 +133,39 @@ pub fn run(args: &[String]) -> i32 {
     }
     0
 }
+
+fn max_decimals(strs: &[&str]) -> usize {
+    strs.iter().map(|s| {
+        if let Some(pos) = s.find('.') { s.len() - pos - 1 } else { 0 }
+    }).max().unwrap_or(0)
+}
+
+fn apply_format(fmt: &str, v: f64) -> String {
+    // Support %f, %e, %g, %d and width/precision specifiers
+    let mut out = String::new();
+    let chars: Vec<char> = fmt.chars().collect();
+    let mut i = 0;
+    while i < chars.len() {
+        if chars[i] != '%' { out.push(chars[i]); i += 1; continue; }
+        i += 1;
+        // Collect flags/width/precision
+        let start = i;
+        while i < chars.len() && "0123456789.-+ ".contains(chars[i]) { i += 1; }
+        let spec = &fmt[start..i];
+        if i >= chars.len() { out.push('%'); break; }
+        let conv = chars[i]; i += 1;
+        let formatted = match conv {
+            'f' | 'F' => {
+                let prec = parse_prec(spec, 6);
+                format!("{:.prec$}", v, prec = prec)
+            }
+            'e' => { let prec = parse_prec(spec, 6); format!("{:.prec$e}", v, prec = prec) }
+            'g' | 'G' => format!("{}", v),
+            'd' | 'i' => format!("{}", v as i64),
+            '%' => { out.push('%'); continue; }
+            _ => { out.push('%'); out.push(conv); continue; }
+        };
+        out.push_str(&formatted);
+    }
+    out
+}
