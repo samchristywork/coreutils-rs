@@ -169,3 +169,28 @@ fn apply_format(fmt: &str, v: f64) -> String {
     }
     out
 }
+
+fn parse_prec(spec: &str, default: usize) -> usize {
+    if let Some(pos) = spec.find('.') {
+        spec[pos+1..].parse().unwrap_or(default)
+    } else { default }
+}
+
+fn unescape(s: &str) -> String {
+    let mut out = String::new();
+    let mut chars = s.chars().peekable();
+    while let Some(c) = chars.next() {
+        if c == '\\' {
+            match chars.next() {
+                Some('n') => out.push('\n'),
+                Some('t') => out.push('\t'),
+                Some('\\') => out.push('\\'),
+                Some(c) => { out.push('\\'); out.push(c); }
+                None => out.push('\\'),
+            }
+        } else {
+            out.push(c);
+        }
+    }
+    out
+}
