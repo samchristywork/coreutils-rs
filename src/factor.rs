@@ -97,3 +97,42 @@ fn is_prime(n: u64) -> bool {
     }
     true
 }
+
+fn pollard_rho(n: u64) -> u64 {
+    if n % 2 == 0 { return 2; }
+    let mut rng = n;
+    loop {
+        rng = rng.wrapping_mul(6364136223846793005).wrapping_add(1442695040888963407);
+        let c = (rng % (n - 1)) + 1;
+        let mut x = (rng >> 33) % n + 2;
+        let mut y = x;
+        let mut d = 1u64;
+        while d == 1 {
+            x = (mul_mod(x, x, n) + c) % n;
+            y = (mul_mod(y, y, n) + c) % n;
+            y = (mul_mod(y, y, n) + c) % n;
+            d = gcd(x.abs_diff(y), n);
+        }
+        if d != n { return d; }
+    }
+}
+
+fn gcd(mut a: u64, mut b: u64) -> u64 {
+    while b != 0 { let t = b; b = a % b; a = t; }
+    a
+}
+
+fn mod_pow(mut base: u64, mut exp: u64, modulus: u64) -> u64 {
+    let mut result = 1u64;
+    base %= modulus;
+    while exp > 0 {
+        if exp & 1 == 1 { result = mul_mod(result, base, modulus); }
+        exp >>= 1;
+        base = mul_mod(base, base, modulus);
+    }
+    result
+}
+
+fn mul_mod(a: u64, b: u64, m: u64) -> u64 {
+    ((a as u128 * b as u128) % m as u128) as u64
+}
