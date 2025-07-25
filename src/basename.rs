@@ -78,3 +78,24 @@ pub fn run(args: &[String]) -> i32 {
     }
     0
 }
+
+fn compute(path: &str, suffix: Option<&str>) -> String {
+    // Strip trailing slashes (but keep root "/")
+    let trimmed = path.trim_end_matches('/');
+    let trimmed = if trimmed.is_empty() { "/" } else { trimmed };
+
+    // Take the last component
+    let base = match trimmed.rfind('/') {
+        Some(pos) => &trimmed[pos + 1..],
+        None      => trimmed,
+    };
+    let base = if base.is_empty() { "/" } else { base };
+
+    // Strip suffix if it matches (and would not empty the result)
+    if let Some(suf) = suffix {
+        if base != suf && base.ends_with(suf) {
+            return base[..base.len() - suf.len()].to_string();
+        }
+    }
+    base.to_string()
+}
