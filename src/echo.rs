@@ -43,3 +43,54 @@ pub fn run(args: &[String]) -> i32 {
     if newline { let _ = out.write_all(b"\n"); }
     0
 }
+
+pub fn process_escapes(s: &str) -> String {
+    let mut out = String::new();
+    let mut chars = s.chars().peekable();
+    while let Some(c) = chars.next() {
+        if c != '\\' { out.push(c); continue; }
+        match chars.next() {
+            Some('\\') => out.push('\\'),
+            Some('n')  => out.push('\n'),
+            Some('t')  => out.push('\t'),
+            Some('r')  => out.push('\r'),
+            Some('a')  => out.push('\x07'),
+            Some('b')  => out.push('\x08'),
+            Some('f')  => out.push('\x0C'),
+            Some('v')  => out.push('\x0B'),
+            Some('e')  => out.push('\x1B'),
+            Some('0') => {
+                // Octal: up to 3 digits
+                let mut oct = String::new();
+                for _ in 0..3 {
+                    match chars.peek() {
+                        Some(&d) if d >= '0' && d <= '7' => { oct.push(d); chars.next(); }
+                        _ => break,
+                    }
+                }
+                let val = u8::from_str_radix(&oct, 8).unwrap_or(0);
+                out.push(val as char);
+            }
+            Some('x') => {
+                // Hex: up to 2 digits
+                let mut hex = String::new();
+                for _ in 0..2 {
+                    match chars.peek() {
+                        Some(&d) if d.is_ascii_hexdigit() => { hex.push(d); chars.next(); }
+                        _ => break,
+                    }
+                }
+                if !hex.is_empty() {
+                    let val = u8::from_str_radix(&hex, 16).unwrap_or(0);
+                    out.push(val as char);
+                } else {
+                    out.push('\\'); out.push('x');
+                }
+            }
+            Some('c') => break, // suppress further output
+            Some(c)  => { out.push('\\'); out.push(c); }
+            None     => out.push('\\'),
+        }
+    }
+    out
+}
