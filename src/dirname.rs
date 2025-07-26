@@ -29,3 +29,23 @@ pub fn run(args: &[String]) -> i32 {
     }
     0
 }
+
+fn compute(path: &str) -> String {
+    // Strip trailing slashes (but keep at least one for root)
+    let trimmed = path.trim_end_matches('/');
+
+    if trimmed.is_empty() {
+        // path was all slashes
+        return "/".to_string();
+    }
+
+    match trimmed.rfind('/') {
+        None => ".".to_string(),
+        Some(0) => "/".to_string(),
+        Some(pos) => {
+            // Strip any extra trailing slashes before the last component
+            let dir = trimmed[..pos].trim_end_matches('/');
+            if dir.is_empty() { "/".to_string() } else { dir.to_string() }
+        }
+    }
+}
