@@ -56,3 +56,30 @@ struct Utmp {
     ut_addr_v6: [i32; 4],
     _unused: [u8; 20],
 }
+
+const USER_PROCESS: i16 = 7;
+
+fn read_utmp(path: &str) -> Result<BTreeSet<String>, std::io::Error> {
+    use std::io::Read;
+    let mut f = std::fs::File::open(path)?;
+    let record_size = std::mem::size_of::<Utmp>();
+    let mut buf = vec![0u8; record_size];
+    let mut users = BTreeSet::new();
+
+    loop {
+        let n = f.read(&mut buf)?;
+        if n == 0 { break; }
+        if n < record_size { break; }
+
+        let rec: &Utmp = unsafe { &*(buf.as_ptr() as *const Utmp) };
+        if rec.ut_type == USER_PROCESS {
+            let name = CStr::from_bytes_until_nul(&rec.ut_user)
+                .map(|s| s.to_string_lossy().into_owned())
+                .unwrap_or_default();
+            if !name.is_empty() {
+                users.insert(name);
+            }
+        }
+    }
+    Ok(users)
+}
