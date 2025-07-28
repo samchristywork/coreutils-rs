@@ -147,3 +147,15 @@ fn run_check(
     }
     exit_code
 }
+
+fn parse_check_line(line: &str) -> Option<(String, String)> {
+    // Format: "<hash>  <file>" (two spaces, text) or "<hash> *<file>" (space+star, binary)
+    // The hash is a hex string (any length)
+    let space = line.find("  ").or_else(|| line.find(" *"))?;
+    let hash = line[..space].trim().to_string();
+    if hash.is_empty() || !hash.chars().all(|c| c.is_ascii_hexdigit()) { return None; }
+    let rest = &line[space + 2..];
+    let filename = rest.trim_start_matches('*').to_string();
+    if filename.is_empty() { return None; }
+    Some((hash, filename))
+}
