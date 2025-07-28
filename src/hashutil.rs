@@ -45,3 +45,31 @@ pub fn run(args: &[String], compute_fn: fn(&mut dyn Read) -> io::Result<String>)
         run_hash(&paths, compute_fn, binary)
     }
 }
+
+fn run_hash(paths: &[String], compute_fn: fn(&mut dyn Read) -> io::Result<String>, binary: bool) -> i32 {
+    let stdout = io::stdout();
+    let mut out = io::BufWriter::new(stdout.lock());
+    let mut exit_code = 0;
+
+    let mode_char = if binary { '*' } else { ' ' };
+
+    if paths.is_empty() {
+        match compute_fn(&mut io::stdin()) {
+            Ok(digest) => { let _ = writeln!(out, "{}  -", digest); }
+            Err(e) => { eprintln!("-: {}", e); exit_code = 1; }
+        }
+    } else {
+        for path in paths {
+            let result = if path == "-" {
+                compute_fn(&mut io::stdin())
+            } else {
+                File::open(path).and_then(|mut f| compute_fn(&mut f))
+            };
+            match result {
+                Ok(digest) => { let _ = writeln!(out, "{} {}{}", digest, mode_char, path); }
+                Err(e) => { eprintln!("{}: {}", path, e); exit_code = 1; }
+            }
+        }
+    }
+    exit_code
+}
