@@ -215,3 +215,45 @@ fn md5_digest(input: &[u8]) -> String {
     format!("{:08x}{:08x}{:08x}{:08x}",
         a0.swap_bytes(), b0.swap_bytes(), c0.swap_bytes(), d0.swap_bytes())
 }
+
+pub fn sha1(r: &mut dyn Read) -> io::Result<String> {
+    let data = read_all(r)?;
+    Ok(sha1_digest(&data))
+}
+
+fn sha1_digest(input: &[u8]) -> String {
+    let bit_len = (input.len() as u64).wrapping_mul(8);
+    let mut msg = input.to_vec();
+    msg.push(0x80);
+    while msg.len() % 64 != 56 { msg.push(0); }
+    msg.extend_from_slice(&bit_len.to_be_bytes());
+
+    let (mut h0, mut h1, mut h2, mut h3, mut h4) = (
+        0x67452301u32, 0xEFCDAB89u32, 0x98BADCFEu32, 0x10325476u32, 0xC3D2E1F0u32,
+    );
+
+    for chunk in msg.chunks(64) {
+        let mut w = [0u32; 80];
+        for (i, word) in w[..16].iter_mut().enumerate() {
+            *word = u32::from_be_bytes(chunk[i*4..i*4+4].try_into().unwrap());
+        }
+        for i in 16..80 {
+            w[i] = (w[i-3] ^ w[i-8] ^ w[i-14] ^ w[i-16]).rotate_left(1);
+        }
+        let (mut a, mut b, mut c, mut d, mut e) = (h0, h1, h2, h3, h4);
+        for i in 0..80 {
+            let (f, k) = match i {
+                0..=19  => ((b & c) | (!b & d),              0x5A827999u32),
+                20..=39 => (b ^ c ^ d,                       0x6ED9EBA1u32),
+                40..=59 => ((b & c) | (b & d) | (c & d),    0x8F1BBCDCu32),
+                _       => (b ^ c ^ d,                       0xCA62C1D6u32),
+            };
+            let temp = a.rotate_left(5).wrapping_add(f).wrapping_add(e).wrapping_add(k).wrapping_add(w[i]);
+            e = d; d = c; c = b.rotate_left(30); b = a; a = temp;
+        }
+        h0 = h0.wrapping_add(a); h1 = h1.wrapping_add(b);
+        h2 = h2.wrapping_add(c); h3 = h3.wrapping_add(d); h4 = h4.wrapping_add(e);
+    }
+
+    format!("{:08x}{:08x}{:08x}{:08x}{:08x}", h0, h1, h2, h3, h4)
+}
