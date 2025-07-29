@@ -153,3 +153,21 @@ fn get_user_info(username: Option<&str>) -> Option<UserInfo> {
         Some(UserInfo { uid, gid, euid, egid, groups })
     }
 }
+
+fn get_current_groups() -> Vec<u32> {
+    let mut buf = vec![0u32; 64];
+    let n = unsafe { getgroups(buf.len() as i32, buf.as_mut_ptr()) };
+    if n < 0 { return vec![unsafe { getgid() }]; }
+    buf.truncate(n as usize);
+    if buf.is_empty() { buf.push(unsafe { getgid() }); }
+    buf
+}
+
+fn get_groups_for_user(pw_name: *const i8, gid: u32) -> Vec<u32> {
+    let mut ngroups = 64i32;
+    let mut buf = vec![0u32; 64];
+    unsafe { getgrouplist(pw_name, gid, buf.as_mut_ptr(), &mut ngroups) };
+    buf.truncate(ngroups.max(0) as usize);
+    if buf.is_empty() { buf.push(gid); }
+    buf
+}
