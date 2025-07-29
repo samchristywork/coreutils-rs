@@ -104,3 +104,33 @@ pub fn run(args: &[String]) -> i32 {
     println!("{}", out);
     0
 }
+
+struct UserInfo {
+    uid: u32,
+    gid: u32,
+    euid: u32,
+    egid: u32,
+    groups: Vec<u32>,
+}
+
+#[repr(C)]
+struct Passwd {
+    pw_name: *const i8,
+    pw_passwd: *const i8,
+    pw_uid: u32,
+    pw_gid: u32,
+    pw_gecos: *const i8,
+    pw_dir: *const i8,
+    pw_shell: *const i8,
+}
+
+extern "C" {
+    fn getuid() -> u32;
+    fn getgid() -> u32;
+    fn geteuid() -> u32;
+    fn getegid() -> u32;
+    fn getpwuid(uid: u32) -> *const Passwd;
+    fn getpwnam(name: *const i8) -> *const Passwd;
+    fn getgroups(size: i32, list: *mut u32) -> i32;
+    fn getgrouplist(user: *const i8, gid: u32, groups: *mut u32, ngroups: *mut i32) -> i32;
+}
