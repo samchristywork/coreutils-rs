@@ -134,3 +134,22 @@ extern "C" {
     fn getgroups(size: i32, list: *mut u32) -> i32;
     fn getgrouplist(user: *const i8, gid: u32, groups: *mut u32, ngroups: *mut i32) -> i32;
 }
+
+fn get_user_info(username: Option<&str>) -> Option<UserInfo> {
+    if let Some(name) = username {
+        let c_name = std::ffi::CString::new(name).ok()?;
+        let pw = unsafe { getpwnam(c_name.as_ptr()) };
+        if pw.is_null() { return None; }
+        let uid = unsafe { (*pw).pw_uid };
+        let gid = unsafe { (*pw).pw_gid };
+        let groups = get_groups_for_user(unsafe { (*pw).pw_name }, gid);
+        Some(UserInfo { uid, gid, euid: uid, egid: gid, groups })
+    } else {
+        let uid = unsafe { getuid() };
+        let gid = unsafe { getgid() };
+        let euid = unsafe { geteuid() };
+        let egid = unsafe { getegid() };
+        let groups = get_current_groups();
+        Some(UserInfo { uid, gid, euid, egid, groups })
+    }
+}
