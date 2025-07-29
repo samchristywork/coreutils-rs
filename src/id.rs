@@ -171,3 +171,18 @@ fn get_groups_for_user(pw_name: *const i8, gid: u32) -> Vec<u32> {
     if buf.is_empty() { buf.push(gid); }
     buf
 }
+
+fn uid_name(uid: u32) -> String {
+    let pw = unsafe { getpwuid(uid) };
+    if pw.is_null() { return uid.to_string(); }
+    unsafe { CStr::from_ptr((*pw).pw_name).to_string_lossy().into_owned() }
+}
+
+fn gid_name(gid: u32) -> String {
+    #[repr(C)]
+    struct Group { gr_name: *const i8, _rest: [u8; 64] }
+    extern "C" { fn getgrgid(gid: u32) -> *const Group; }
+    let gr = unsafe { getgrgid(gid) };
+    if gr.is_null() { return gid.to_string(); }
+    unsafe { CStr::from_ptr((*gr).gr_name).to_string_lossy().into_owned() }
+}
