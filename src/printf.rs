@@ -173,3 +173,48 @@ fn format_once(fmt: &str, operands: &[String]) -> (String, usize) {
 
     (out, op_idx)
 }
+
+fn pad(s: &str, width: usize, left: bool, fill: char) -> String {
+    if s.len() >= width { return s.to_string(); }
+    let padding: String = std::iter::repeat(fill).take(width - s.len()).collect();
+    if left { format!("{}{}", s, padding) } else { format!("{}{}", padding, s) }
+}
+
+fn apply_numeric_flags(s: &str, flags: &str, width: usize, _prec: Option<&str>, _is_float: bool) -> String {
+    let left = flags.contains('-');
+    let zero_pad = flags.contains('0') && !left;
+    let show_sign = flags.contains('+');
+    let space_sign = flags.contains(' ');
+
+    let (neg, digits) = if s.starts_with('-') { (true, &s[1..]) } else { (false, &s[..]) };
+    let sign = if neg { "-" } else if show_sign { "+" } else if space_sign { " " } else { "" };
+    let with_sign = format!("{}{}", sign, digits);
+
+    if width == 0 || with_sign.len() >= width { return with_sign; }
+    let pad_len = width - with_sign.len();
+    if zero_pad {
+        format!("{}{}{}", sign, "0".repeat(pad_len), digits)
+    } else if left {
+        format!("{}{}", with_sign, " ".repeat(pad_len))
+    } else {
+        format!("{}{}", " ".repeat(pad_len), with_sign)
+    }
+}
+
+fn parse_int_arg(s: &str) -> i64 {
+    let s = s.trim();
+    if s.starts_with('"') || s.starts_with('\'') {
+        return s.chars().nth(1).map(|c| c as i64).unwrap_or(0);
+    }
+    if s.starts_with("0x") || s.starts_with("0X") {
+        return i64::from_str_radix(&s[2..], 16).unwrap_or(0);
+    }
+    if s.starts_with('0') && s.len() > 1 {
+        return i64::from_str_radix(&s[1..], 8).unwrap_or(0);
+    }
+    s.parse().unwrap_or(0)
+}
+
+fn parse_uint_arg(s: &str) -> u64 {
+    parse_int_arg(s) as u64
+}
