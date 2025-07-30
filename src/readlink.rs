@@ -74,3 +74,72 @@ pub fn run(args: &[String]) -> i32 {
     }
     exit_code
 }
+
+// Resolve path to canonical form. If allow_missing, resolve as far as possible.
+fn resolve_path(path: &Path, allow_missing: bool) -> Option<std::path::PathBuf> {
+    use std::path::PathBuf;
+
+    // Build absolute path first
+    let abs = if path.is_absolute() {
+        path.to_path_buf()
+    } else {
+        match std::env::current_dir() {
+            Ok(cwd) => cwd.join(path),
+            Err(_) => return None,
+        }
+    };
+
+    let mut resolved = PathBuf::from("/");
+    let mut symlink_limit = 40;
+
+    // Stack of remaining path segments (owned strings)
+    let mut stack: Vec<PathBuf> = abs.components()
+        .map(|c| PathBuf::from(c.as_os_str()))
+        .collect();
+    stack.reverse();
+
+    while let Some(part) = stack.pop() {
+        let s = part.to_string_lossy();
+        if s == "/" {
+            resolved = PathBuf::from("/");
+        } else if s == "." {
+            // skip
+        } else if s == ".." {
+            resolved.pop();
+        } else {
+            resolved.push(&*s);
+            match fs::read_link(&resolved) {
+                Ok(target) => {
+                    symlink_limit -= 1;
+                    if symlink_limit == 0 {
+                        if !allow_missing { eprintln!("readlink: {}: Too many levels of symbolic links", resolved.display()); }
+                        return None;
+                    }
+                    let expanded = if target.is_absolute() {
+                        target
+                    } else {
+                        let mut base = resolved.clone();
+                        base.pop();
+                        base.join(target)
+                    };
+                    resolved.pop();
+                    let mut extra: Vec<PathBuf> = expanded.components()
+                        .map(|c| PathBuf::from(c.as_os_str()))
+                        .collect();
+                    extra.reverse();
+                    stack.extend(extra);
+                }
+                Err(e) if e.raw_os_error() == Some(22) /* EINVAL = not a symlink */ => {
+                    // Normal file/dir, keep as-is
+                }
+                Err(_) => {
+                    if !allow_missing {
+                        eprintln!("readlink: {}: No such file or directory", resolved.display());
+                        return None;
+                    }
+                }
+            }
+        }
+    }
+    Some(resolved)
+}
