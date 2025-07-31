@@ -131,3 +131,16 @@ fn make_absolute(path: &Path) -> PathBuf {
         std::env::current_dir().unwrap_or_else(|_| PathBuf::from("/")).join(path)
     }
 }
+
+fn normalize(path: PathBuf) -> PathBuf {
+    let mut out = PathBuf::new();
+    for comp in path.components() {
+        use std::path::Component;
+        match comp {
+            Component::ParentDir => { out.pop(); }
+            Component::CurDir => {}
+            c => out.push(c),
+        }
+    }
+    out
+}
