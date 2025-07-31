@@ -108,3 +108,26 @@ pub fn run(args: &[String]) -> i32 {
     }
     exit_code
 }
+
+fn resolve(path: &Path, logical: bool, no_symlinks: bool, missing_ok: bool) -> Option<PathBuf> {
+    if no_symlinks {
+        // Just make absolute without resolving symlinks
+        return Some(make_absolute(path));
+    }
+
+    if logical {
+        // Resolve ./ and ../ but don't follow symlinks
+        return Some(normalize(make_absolute(path)));
+    }
+
+    // Physical: resolve all symlinks
+    canonicalize_path(path, missing_ok)
+}
+
+fn make_absolute(path: &Path) -> PathBuf {
+    if path.is_absolute() {
+        path.to_path_buf()
+    } else {
+        std::env::current_dir().unwrap_or_else(|_| PathBuf::from("/")).join(path)
+    }
+}
