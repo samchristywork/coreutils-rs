@@ -188,3 +188,16 @@ fn canonicalize_path(path: &Path, missing_ok: bool) -> Option<PathBuf> {
     }
     Some(resolved)
 }
+
+fn make_relative(path: &PathBuf, base: &PathBuf) -> Option<PathBuf> {
+    let path_comps: Vec<_> = path.components().collect();
+    let base_comps: Vec<_> = base.components().collect();
+
+    let common = path_comps.iter().zip(base_comps.iter()).take_while(|(a, b)| a == b).count();
+
+    let mut result = PathBuf::new();
+    for _ in common..base_comps.len() { result.push(".."); }
+    for comp in &path_comps[common..] { result.push(comp); }
+
+    if result.as_os_str().is_empty() { Some(PathBuf::from(".")) } else { Some(result) }
+}
