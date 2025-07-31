@@ -144,3 +144,47 @@ fn normalize(path: PathBuf) -> PathBuf {
     }
     out
 }
+
+fn canonicalize_path(path: &Path, missing_ok: bool) -> Option<PathBuf> {
+    let abs = make_absolute(path);
+    let mut resolved = PathBuf::from("/");
+    let mut limit = 40usize;
+
+    let mut stack: Vec<PathBuf> = abs.components()
+        .map(|c| PathBuf::from(c.as_os_str()))
+        .collect();
+    stack.reverse();
+
+    while let Some(part) = stack.pop() {
+        let s = part.to_string_lossy();
+        match s.as_ref() {
+            "/" => { resolved = PathBuf::from("/"); }
+            "." => {}
+            ".." => { resolved.pop(); }
+            name => {
+                resolved.push(name);
+                match fs::read_link(&resolved) {
+                    Ok(target) => {
+                        limit -= 1;
+                        if limit == 0 { return None; }
+                        resolved.pop();
+                        let expanded = if target.is_absolute() { target } else { resolved.join(target) };
+                        let mut extra: Vec<PathBuf> = expanded.components()
+                            .map(|c| PathBuf::from(c.as_os_str()))
+                            .collect();
+                        extra.reverse();
+                        stack.extend(extra);
+                    }
+                    Err(e) if e.raw_os_error() == Some(22) => { /* EINVAL: not a symlink, keep */ }
+                    Err(_) => {
+                        if !missing_ok && stack.is_empty() { return None; }
+                        if !missing_ok && !resolved.parent().map(|p| p.exists()).unwrap_or(false) {
+                            return None;
+                        }
+                    }
+                }
+            }
+        }
+    }
+    Some(resolved)
+}
