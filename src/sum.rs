@@ -50,3 +50,36 @@ pub fn run(args: &[String]) -> i32 {
     }
     exit_code
 }
+
+fn compute(r: &mut dyn Read, sysv: bool) -> (u32, u64) {
+    let mut buf = [0u8; 8192];
+    let mut total_bytes: u64 = 0;
+
+    if sysv {
+        let mut s: u32 = 0;
+        loop {
+            let n = r.read(&mut buf).unwrap_or(0);
+            if n == 0 { break; }
+            for &b in &buf[..n] { s = s.wrapping_add(b as u32); }
+            total_bytes += n as u64;
+        }
+        let r = (s & 0xffff).wrapping_add(s >> 16);
+        let r = (r & 0xffff).wrapping_add(r >> 16);
+        let blocks = (total_bytes + 511) / 512;
+        (r & 0xffff, blocks)
+    } else {
+        // BSD: 16-bit rotate-right checksum, 1024-byte blocks
+        let mut cksum: u32 = 0;
+        loop {
+            let n = r.read(&mut buf).unwrap_or(0);
+            if n == 0 { break; }
+            for &b in &buf[..n] {
+                cksum = (cksum >> 1) | ((cksum & 1) << 15);
+                cksum = (cksum + b as u32) & 0xffff;
+            }
+            total_bytes += n as u64;
+        }
+        let blocks = (total_bytes + 1023) / 1024;
+        (cksum, blocks)
+    }
+}
