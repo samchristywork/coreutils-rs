@@ -101,3 +101,47 @@ fn parse_primary<'a>(tok: &'a [&'a str]) -> ParseResult<'a> {
     // Single argument: true if non-empty string
     Ok((!lhs.is_empty(), &tok[1..]))
 }
+
+fn is_binary_op(s: &str) -> bool {
+    matches!(s, "=" | "==" | "!=" | "<" | ">" |
+               "-eq" | "-ne" | "-lt" | "-le" | "-gt" | "-ge")
+}
+
+fn eval_unary(op: &str, arg: &str) -> Result<bool, String> {
+    match op {
+        "-z" => Ok(arg.is_empty()),
+        "-n" => Ok(!arg.is_empty()),
+        "-e" => Ok(fs::symlink_metadata(arg).is_ok()),
+        "-f" => Ok(fs::metadata(arg).map(|m| m.is_file()).unwrap_or(false)),
+        "-d" => Ok(fs::metadata(arg).map(|m| m.is_dir()).unwrap_or(false)),
+        "-r" => Ok(access(arg, 4)),
+        "-w" => Ok(access(arg, 2)),
+        "-x" => Ok(access(arg, 1)),
+        "-s" => Ok(fs::metadata(arg).map(|m| m.len() > 0).unwrap_or(false)),
+        "-L" | "-h" => Ok(fs::symlink_metadata(arg).map(|m| m.file_type().is_symlink()).unwrap_or(false)),
+        "-p" => Ok(fs::metadata(arg).map(|m| (m.mode() & 0o170000) == 0o010000).unwrap_or(false)),
+        "-S" => Ok(fs::metadata(arg).map(|m| (m.mode() & 0o170000) == 0o140000).unwrap_or(false)),
+        "-b" => Ok(fs::metadata(arg).map(|m| (m.mode() & 0o170000) == 0o060000).unwrap_or(false)),
+        "-c" => Ok(fs::metadata(arg).map(|m| (m.mode() & 0o170000) == 0o020000).unwrap_or(false)),
+        "-g" => Ok(fs::metadata(arg).map(|m| m.mode() & 0o2000 != 0).unwrap_or(false)),
+        "-u" => Ok(fs::metadata(arg).map(|m| m.mode() & 0o4000 != 0).unwrap_or(false)),
+        "-k" => Ok(fs::metadata(arg).map(|m| m.mode() & 0o1000 != 0).unwrap_or(false)),
+        "-t" => {
+            let fd: i32 = arg.parse().unwrap_or(-1);
+            Ok(isatty(fd))
+        }
+        "-O" => {
+            extern "C" { fn getuid() -> u32; }
+            Ok(fs::metadata(arg).map(|m| m.uid() == unsafe { getuid() }).unwrap_or(false))
+        }
+        "-G" => {
+            extern "C" { fn getgid() -> u32; }
+            Ok(fs::metadata(arg).map(|m| m.gid() == unsafe { getgid() }).unwrap_or(false))
+        }
+        "-N" => {
+            // True if file modified since last read
+            Ok(fs::metadata(arg).map(|m| m.mtime() >= m.atime()).unwrap_or(false))
+        }
+        _ => Err(format!("unknown unary operator '{}'", op)),
+    }
+}
