@@ -145,3 +145,37 @@ fn eval_unary(op: &str, arg: &str) -> Result<bool, String> {
         _ => Err(format!("unknown unary operator '{}'", op)),
     }
 }
+
+fn eval_binary(lhs: &str, op: &str, rhs: &str) -> Result<bool, String> {
+    match op {
+        "=" | "==" => Ok(lhs == rhs),
+        "!="       => Ok(lhs != rhs),
+        "<"        => Ok(lhs < rhs),
+        ">"        => Ok(lhs > rhs),
+        "-eq" => int_cmp(lhs, rhs, |a, b| a == b),
+        "-ne" => int_cmp(lhs, rhs, |a, b| a != b),
+        "-lt" => int_cmp(lhs, rhs, |a, b| a <  b),
+        "-le" => int_cmp(lhs, rhs, |a, b| a <= b),
+        "-gt" => int_cmp(lhs, rhs, |a, b| a >  b),
+        "-ge" => int_cmp(lhs, rhs, |a, b| a >= b),
+        "-ef" => {
+            let m1 = fs::metadata(lhs);
+            let m2 = fs::metadata(rhs);
+            Ok(match (m1, m2) {
+                (Ok(a), Ok(b)) => a.dev() == b.dev() && a.ino() == b.ino(),
+                _ => false,
+            })
+        }
+        "-nt" => {
+            let t1 = fs::metadata(lhs).map(|m| m.mtime()).unwrap_or(i64::MIN);
+            let t2 = fs::metadata(rhs).map(|m| m.mtime()).unwrap_or(i64::MIN);
+            Ok(t1 > t2)
+        }
+        "-ot" => {
+            let t1 = fs::metadata(lhs).map(|m| m.mtime()).unwrap_or(i64::MAX);
+            let t2 = fs::metadata(rhs).map(|m| m.mtime()).unwrap_or(i64::MAX);
+            Ok(t1 < t2)
+        }
+        _ => Err(format!("unknown binary operator '{}'", op)),
+    }
+}
