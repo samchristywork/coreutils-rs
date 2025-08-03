@@ -82,8 +82,8 @@ pub fn run(args: &[String]) -> i32 {
     };
 
     // Apply skips
-    if skip1 > 0 { if skip_bytes(&mut r1, skip1).is_err() { /* EOF before skip, continue */ } }
-    if skip2 > 0 { if skip_bytes(&mut r2, skip2).is_err() { /* EOF before skip, continue */ } }
+    if skip1 > 0 && skip_bytes(&mut r1, skip1).is_err() { /* EOF before skip, continue */ }
+    if skip2 > 0 && skip_bytes(&mut r2, skip2).is_err() { /* EOF before skip, continue */ }
 
     let stdout = io::stdout();
     let mut out = io::BufWriter::new(stdout.lock());
