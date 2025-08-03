@@ -1,11 +1,33 @@
+mod basename;
+mod cksum;
 mod cp;
+mod dirname;
+mod echo;
+mod r#false;
+mod printf;
+mod realpath;
+mod r#test;
+mod r#true;
+mod yes;
 mod date;
 mod expr;
 mod factor;
+mod groups;
+mod hashutil;
+mod id;
+mod ln;
 mod ls;
+mod md5sum;
+mod readlink;
 mod seq;
+mod sha1sum;
+mod sha256sum;
+mod sha512sum;
 mod sleep;
+mod sum;
 mod timeout;
+mod users;
+mod whoami;
 mod cat;
 mod chmod;
 mod chown;
@@ -100,6 +122,33 @@ fn main() {
         "expr" => expr::run(cmd_args),
         "seq" => seq::run(cmd_args),
         "factor" => factor::run(cmd_args),
+        // Links
+        "ln" => ln::run(cmd_args),
+        "readlink" => readlink::run(cmd_args),
+        // User and Group Info
+        "whoami" => whoami::run(cmd_args),
+        "id" => id::run(cmd_args),
+        "groups" => groups::run(cmd_args),
+        "users" => users::run(cmd_args),
+        // Checksums
+        "md5sum" => md5sum::run(cmd_args),
+        "sha1sum" => sha1sum::run(cmd_args),
+        "sha256sum" => sha256sum::run(cmd_args),
+        "sha512sum" => sha512sum::run(cmd_args),
+        "sum" => sum::run(cmd_args),
+        "cksum" => cksum::run(cmd_args),
+        // Path Manipulation
+        "basename" => basename::run(cmd_args),
+        "dirname" => dirname::run(cmd_args),
+        "realpath" => realpath::run(cmd_args),
+        // Miscellaneous
+        "echo" => echo::run(cmd_args),
+        "printf" => printf::run(cmd_args),
+        "yes" => yes::run(cmd_args),
+        "true" => r#true::run(cmd_args),
+        "false" => r#false::run(cmd_args),
+        "test" => r#test::run(cmd_args),
+        "[" => r#test::run_bracket(cmd_args, true),
         _ => {
             eprintln!("coreutils-rs: '{}' is not a supported command", cmd);
             1
