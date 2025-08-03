@@ -179,3 +179,9 @@ fn eval_binary(lhs: &str, op: &str, rhs: &str) -> Result<bool, String> {
         _ => Err(format!("unknown binary operator '{}'", op)),
     }
 }
+
+fn int_cmp(a: &str, b: &str, f: impl Fn(i64, i64) -> bool) -> Result<bool, String> {
+    let x: i64 = a.trim().parse().map_err(|_| format!("integer expression expected: '{}'", a))?;
+    let y: i64 = b.trim().parse().map_err(|_| format!("integer expression expected: '{}'", b))?;
+    Ok(f(x, y))
+}
