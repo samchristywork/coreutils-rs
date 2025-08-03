@@ -155,6 +155,7 @@ struct StatVfs {
     _pad: [i64; 6],
 }
 
+#[allow(clashing_extern_declarations)]
 extern "C" { fn statvfs(path: *const i8, buf: *mut StatVfs) -> i32; }
 
 fn stat_fs<W: Write>(path: &str, format: Option<&str>, out: &mut W) -> i32 {
@@ -303,6 +304,7 @@ fn uid_name(uid: u32) -> String {
     use std::ffi::CStr;
     #[repr(C)]
     struct Passwd { pw_name: *const i8, _rest: [u8; 64] }
+    #[allow(clashing_extern_declarations)]
     extern "C" { fn getpwuid(uid: u32) -> *const Passwd; }
     let pw = unsafe { getpwuid(uid) };
     if pw.is_null() { return uid.to_string(); }
