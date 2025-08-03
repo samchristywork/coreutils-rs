@@ -10,6 +10,7 @@ pub fn run(args: &[String]) -> i32 {
 
     #[repr(C)]
     struct Passwd { pw_name: *const i8, _rest: [u8; 64] }
+    #[allow(clashing_extern_declarations)]
     extern "C" {
         fn getuid() -> u32;
         fn getpwuid(uid: u32) -> *const Passwd;
