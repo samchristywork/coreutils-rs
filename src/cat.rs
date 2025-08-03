@@ -106,6 +106,7 @@ pub fn run(args: &[String]) -> i32 {
     exit_code
 }
 
+#[allow(clippy::too_many_arguments)]
 fn cat_reader<R: Read, W: Write>(
     reader: &mut R,
     out: &mut W,
@@ -166,12 +167,7 @@ fn cat_reader<R: Read, W: Write>(
             }
         }
 
-        if number_lines {
-            if write!(out, "{:6}\t", line_num).is_err() {
-                return 1;
-            }
-            *line_num += 1;
-        } else if number_nonblank && !is_blank {
+        if number_lines || (number_nonblank && !is_blank) {
             if write!(out, "{:6}\t", line_num).is_err() {
                 return 1;
             }
@@ -188,16 +184,12 @@ fn cat_reader<R: Read, W: Write>(
             return 1;
         }
 
-        if show_ends {
-            if out.write_all(b"$").is_err() {
-                return 1;
-            }
+        if show_ends && out.write_all(b"$").is_err() {
+            return 1;
         }
 
-        if has_newline {
-            if out.write_all(b"\n").is_err() {
-                return 1;
-            }
+        if has_newline && out.write_all(b"\n").is_err() {
+            return 1;
         }
     }
 
