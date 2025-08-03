@@ -170,7 +170,7 @@ fn cut_reader<R: BufRead, W: Write>(
             let _ = writeln!(out, "{}", selected.join(&(delimiter as char).to_string()));
         } else if let Some(ranges) = bytes {
             let b = content.as_bytes();
-            let selected: Vec<u8> = select_indices(&b.iter().copied().collect::<Vec<u8>>(), ranges);
+            let selected: Vec<u8> = select_indices(b, ranges);
             let _ = out.write_all(&selected);
             let _ = writeln!(out);
         } else if let Some(ranges) = chars {
@@ -189,8 +189,8 @@ fn select_indices<T: Clone>(items: &[T], ranges: &[Range]) -> Vec<T> {
     for range in ranges {
         let start = range.start.unwrap_or(1).saturating_sub(1);
         let end = range.end.unwrap_or(len).min(len);
-        for i in start..end {
-            out.push(items[i].clone());
+        for item in items.iter().take(end).skip(start) {
+            out.push(item.clone());
         }
     }
     out
