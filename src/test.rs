@@ -185,3 +185,15 @@ fn int_cmp(a: &str, b: &str, f: impl Fn(i64, i64) -> bool) -> Result<bool, Strin
     let y: i64 = b.trim().parse().map_err(|_| format!("integer expression expected: '{}'", b))?;
     Ok(f(x, y))
 }
+
+fn access(path: &str, mode: u32) -> bool {
+    use std::ffi::CString;
+    let c = match CString::new(path) { Ok(c) => c, Err(_) => return false };
+    extern "C" { fn access(path: *const i8, mode: i32) -> i32; }
+    unsafe { access(c.as_ptr(), mode as i32) == 0 }
+}
+
+fn isatty(fd: i32) -> bool {
+    extern "C" { fn isatty(fd: i32) -> i32; }
+    unsafe { isatty(fd) == 1 }
+}
