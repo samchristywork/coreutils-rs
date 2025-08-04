@@ -247,7 +247,7 @@ fn print_normal<W: Write>(a: &[String], b: &[String], edits: &[Edit], out: &mut 
 
         // For 'a', left is the line after which insertion happens
         let left_str = if op == 'a' {
-            format!("{}", dels.first().map(|&x| x).unwrap_or(ins[0].saturating_sub(1)) + 1)
+            format!("{}", dels.first().copied().unwrap_or(ins[0].saturating_sub(1)) + 1)
         } else { left };
         // For 'd', right is the line before which deletion would go
         let right_str = if op == 'd' {
