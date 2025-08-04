@@ -126,19 +126,19 @@ fn format_date(fmt: &str, secs: i64, utc: bool) -> String {
             Some('M') => out.push_str(&format!("{:02}", tm.tm_min)),
             Some('S') => out.push_str(&format!("{:02}", tm.tm_sec)),
             Some('A') => {
-                let w = tm.tm_wday.max(0).min(6) as usize;
+                let w = tm.tm_wday.clamp(0, 6) as usize;
                 out.push_str(WEEKDAYS[w]);
             }
             Some('a') => {
-                let w = tm.tm_wday.max(0).min(6) as usize;
+                let w = tm.tm_wday.clamp(0, 6) as usize;
                 out.push_str(WEEKDAYS_ABB[w]);
             }
             Some('B') => {
-                let m = tm.tm_mon.max(0).min(11) as usize;
+                let m = tm.tm_mon.clamp(0, 11) as usize;
                 out.push_str(MONTHS[m]);
             }
             Some('b') | Some('h') => {
-                let m = tm.tm_mon.max(0).min(11) as usize;
+                let m = tm.tm_mon.clamp(0, 11) as usize;
                 out.push_str(MONTHS_ABB[m]);
             }
             Some('j') => out.push_str(&format!("{:03}", tm.tm_yday + 1)),
@@ -186,8 +186,8 @@ fn format_date(fmt: &str, secs: i64, utc: bool) -> String {
                 out.push_str(&format!("{:02}:{:02}", tm.tm_hour, tm.tm_min));
             }
             Some('c') => {
-                let w = tm.tm_wday.max(0).min(6) as usize;
-                let m = tm.tm_mon.max(0).min(11) as usize;
+                let w = tm.tm_wday.clamp(0, 6) as usize;
+                let m = tm.tm_mon.clamp(0, 11) as usize;
                 out.push_str(&format!("{} {} {:2} {:02}:{:02}:{:02} {:04}",
                     WEEKDAYS_ABB[w], MONTHS_ABB[m], tm.tm_mday,
                     tm.tm_hour, tm.tm_min, tm.tm_sec, tm.tm_year + 1900));
@@ -233,8 +233,8 @@ fn set_system_date(s: &str) -> i32 {
     let min  = parse2(digits[6], digits[7]);
     let year = match digits.len() {
         8  => { let t = get_time(); let tm = get_tm(t, false); tm.tm_year }
-        10 => { let y = parse2(digits[8], digits[9]) as i32; if y >= 69 { y } else { y + 100 } }
-        12 => { parse2(digits[8], digits[9]) as i32 * 100 + parse2(digits[10], digits[11]) as i32 - 1900 }
+        10 => { let y = parse2(digits[8], digits[9]); if y >= 69 { y } else { y + 100 } }
+        12 => { parse2(digits[8], digits[9]) * 100 + parse2(digits[10], digits[11]) - 1900 }
         _  => { eprintln!("date: invalid date '{}'", s); return 1; }
     };
 
