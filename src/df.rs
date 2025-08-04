@@ -44,12 +44,12 @@ pub fn run(args: &[String]) -> i32 {
     let mut out = io::BufWriter::new(stdout.lock());
 
     if inodes {
-        let _ = writeln!(out, "{:<20} {:>12} {:>12} {:>12} {:>6}  {}",
-            "Filesystem", "Inodes", "IUsed", "IFree", "IUse%", "Mounted on");
+        let _ = writeln!(out, "{:<20} {:>12} {:>12} {:>12} {:>6}  Mounted on",
+            "Filesystem", "Inodes", "IUsed", "IFree", "IUse%");
     } else {
         let unit: String = if human { "Size".to_string() } else { format!("{}-blocks", block_size / 512) };
-        let _ = writeln!(out, "{:<20} {:>12} {:>12} {:>12} {:>6}  {}",
-            "Filesystem", unit, "Used", "Available", "Use%", "Mounted on");
+        let _ = writeln!(out, "{:<20} {:>12} {:>12} {:>12} {:>6}  Mounted on",
+            "Filesystem", unit, "Used", "Available", "Use%");
     }
 
     let targets = if paths.is_empty() {
