@@ -176,9 +176,7 @@ fn do_match(s: &str, pattern: &str) -> String {
         } else {
             end.to_string()
         }
-    } else {
-        if has_group { String::new() } else { "0".to_string() }
-    }
+    } else if has_group { String::new() } else { "0".to_string() }
 }
 
 // Returns (match_end_index, Option<(group_start, group_end)>)
@@ -218,11 +216,9 @@ fn bre_rec(
                 // Greedy: try matching as many as possible, then backtrack
                 let mut positions = vec![si];
                 let mut cur = si;
-                loop {
-                    match match_one(&atom_type, s, cur) {
-                        Some(next) => { positions.push(next); cur = next; }
-                        None => break,
-                    }
+                while let Some(next) = match_one(&atom_type, s, cur) {
+                    positions.push(next);
+                    cur = next;
                 }
                 for &pos in positions.iter().rev() {
                     if let Some(r) = bre_rec(s, pos, pat, next_pi, grp_start, grp_end) {
