@@ -225,7 +225,7 @@ pub fn run(args: &[String]) -> i32 {
     0
 }
 
-fn split_line<'a>(line: &'a str, sep: char, whitespace: bool) -> Vec<&'a str> {
+fn split_line(line: &str, sep: char, whitespace: bool) -> Vec<&str> {
     if whitespace {
         line.split_whitespace().collect()
     } else {
@@ -238,6 +238,7 @@ fn get_field(line: &str, field: usize, sep: char, whitespace: bool) -> String {
     fields.get(field.saturating_sub(1)).unwrap_or(&"").to_string()
 }
 
+#[allow(clippy::too_many_arguments)]
 fn emit_joined<W: Write>(
     l1: &str, l2: &str, key: &str,
     f1: usize, f2: usize,
@@ -275,6 +276,7 @@ fn emit_joined<W: Write>(
     let _ = writeln!(out, "{}", result);
 }
 
+#[allow(clippy::too_many_arguments)]
 fn emit_unpairable<W: Write>(
     line: &str, file: usize, join_field: usize,
     sep: char, whitespace: bool,
