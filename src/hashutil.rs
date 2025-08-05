@@ -241,14 +241,14 @@ fn sha1_digest(input: &[u8]) -> String {
             w[i] = (w[i-3] ^ w[i-8] ^ w[i-14] ^ w[i-16]).rotate_left(1);
         }
         let (mut a, mut b, mut c, mut d, mut e) = (h0, h1, h2, h3, h4);
-        for i in 0..80 {
+        for (i, &wi) in w.iter().enumerate() {
             let (f, k) = match i {
                 0..=19  => ((b & c) | (!b & d),              0x5A827999u32),
                 20..=39 => (b ^ c ^ d,                       0x6ED9EBA1u32),
                 40..=59 => ((b & c) | (b & d) | (c & d),    0x8F1BBCDCu32),
                 _       => (b ^ c ^ d,                       0xCA62C1D6u32),
             };
-            let temp = a.rotate_left(5).wrapping_add(f).wrapping_add(e).wrapping_add(k).wrapping_add(w[i]);
+            let temp = a.rotate_left(5).wrapping_add(f).wrapping_add(e).wrapping_add(k).wrapping_add(wi);
             e = d; d = c; c = b.rotate_left(30); b = a; a = temp;
         }
         h0 = h0.wrapping_add(a); h1 = h1.wrapping_add(b);
