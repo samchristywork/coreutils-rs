@@ -64,7 +64,7 @@ pub fn process_escapes(s: &str) -> String {
                 let mut oct = String::new();
                 for _ in 0..3 {
                     match chars.peek() {
-                        Some(&d) if d >= '0' && d <= '7' => { oct.push(d); chars.next(); }
+                        Some(&d) if ('0'..='7').contains(&d) => { oct.push(d); chars.next(); }
                         _ => break,
                     }
                 }
