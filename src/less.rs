@@ -93,7 +93,7 @@ struct Pager<'a> {
     term: Term,
 }
 
-impl<'a> Pager<'a> {
+impl Pager<'_> {
     fn run(&mut self) -> i32 {
         self.draw();
 
@@ -270,14 +270,12 @@ fn truncate_str(s: &str, max_cols: usize) -> &str {
     if max_cols == 0 {
         return "";
     }
-    let mut width = 0;
     let mut end = s.len();
-    for (i, _) in s.char_indices() {
+    for (width, (i, _)) in s.char_indices().enumerate() {
         if width >= max_cols {
             end = i;
             break;
         }
-        width += 1;
     }
     &s[..end]
 }
