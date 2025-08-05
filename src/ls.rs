@@ -364,7 +364,7 @@ fn print_columns(names: &[String]) {
 
     let term_width = terminal_width();
     let cols = (term_width / col_width).max(1);
-    let rows = (names.len() + cols - 1) / cols;
+    let rows = names.len().div_ceil(cols);
 
     for row in 0..rows {
         let mut line = String::new();
