@@ -87,6 +87,7 @@ pub fn run(args: &[String]) -> i32 {
     exit_code
 }
 
+#[allow(clippy::too_many_arguments)]
 fn du_path<W: Write>(
     path: &Path,
     depth: usize,
@@ -111,18 +112,16 @@ fn du_path<W: Write>(
     let ino = meta.ino();
 
     // Skip hard-linked duplicates for non-directories
-    if !meta.is_dir() && meta.nlink() > 1 {
-        if !seen.insert((dev, ino)) {
-            return Ok(0);
-        }
+    if !meta.is_dir() && meta.nlink() > 1 && !seen.insert((dev, ino)) {
+        return Ok(0);
     }
 
     // 512-byte blocks from stat, convert to our block_size
     let file_blocks = meta.blocks() * 512;
 
     if !meta.is_dir() {
-        let display_blocks = (file_blocks + block_size - 1) / block_size;
-        if all && !summarize && max_depth.map_or(true, |d| depth <= d) {
+        let display_blocks = file_blocks.div_ceil(block_size);
+        if all && !summarize && max_depth.is_none_or(|d| depth <= d) {
             print_entry(display_blocks, path, human, block_size, out);
         }
         return Ok(file_blocks);
@@ -150,24 +149,16 @@ fn du_path<W: Write>(
             continue;
         }
 
-        if child_meta.is_dir() && !child_meta.file_type().is_symlink() {
-            match du_path(&child, depth + 1, all, summarize, human, block_size, max_depth, one_fs, seen, out) {
-                Ok(n) => total += n,
-                Err(_) => {}
-            }
-        } else {
-            match du_path(&child, depth + 1, all, summarize, human, block_size, max_depth, one_fs, seen, out) {
-                Ok(n) => total += n,
-                Err(_) => {}
-            }
+        if let Ok(n) = du_path(&child, depth + 1, all, summarize, human, block_size, max_depth, one_fs, seen, out) {
+            total += n;
         }
     }
 
-    let display_blocks = (total + block_size - 1) / block_size;
+    let display_blocks = total.div_ceil(block_size);
     let show = if summarize {
         depth == 0
     } else {
-        max_depth.map_or(true, |d| depth <= d)
+        max_depth.is_none_or(|d| depth <= d)
     };
 
     if show {
