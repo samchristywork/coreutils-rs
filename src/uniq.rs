@@ -227,9 +227,7 @@ fn extract_key<'a>(s: &'a str, opts: &Opts) -> &'a str {
 }
 
 fn should_print(count: u64, opts: &Opts) -> bool {
-    if opts.repeated && opts.unique {
-        count > 1
-    } else if opts.repeated {
+    if opts.repeated {
         count > 1
     } else if opts.unique {
         count == 1
@@ -241,8 +239,6 @@ fn should_print(count: u64, opts: &Opts) -> bool {
 fn emit<W: Write>(line: &str, count: u64, opts: &Opts, out: &mut W) -> i32 {
     if opts.count {
         if writeln!(out, "{:7} {}", count, line).is_err() { return 1; }
-    } else {
-        if writeln!(out, "{}", line).is_err() { return 1; }
-    }
+    } else if writeln!(out, "{}", line).is_err() { return 1; }
     0
 }
