@@ -9,13 +9,9 @@ pub fn run(args: &[String]) -> i32 {
 
     for arg in args {
         if arg.starts_with('-') && arg.len() > 1 && !arg.starts_with("--") {
-            for ch in arg[1..].chars() {
-                match ch {
-                    _ => {
-                        eprintln!("more: invalid option -- '{}'", ch);
-                        return 1;
-                    }
-                }
+            if let Some(ch) = arg[1..].chars().next() {
+                eprintln!("more: invalid option -- '{}'", ch);
+                return 1;
             }
         } else if arg.starts_with('-') && arg != "-" {
             eprintln!("more: unrecognized option '{}'", arg);
@@ -158,14 +154,12 @@ fn truncate_str(s: &str, max_cols: usize) -> &str {
     if max_cols == 0 {
         return "";
     }
-    let mut width = 0;
     let mut end = s.len();
-    for (i, _) in s.char_indices() {
+    for (width, (i, _)) in s.char_indices().enumerate() {
         if width >= max_cols {
             end = i;
             break;
         }
-        width += 1;
     }
     &s[..end]
 }
