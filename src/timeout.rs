@@ -42,7 +42,7 @@ pub fn run(args: &[String]) -> i32 {
             }
             _ if arg.starts_with('-') && arg.len() > 1 && !arg.starts_with("--") => {
                 let mut chars = arg[1..].chars().peekable();
-                while let Some(ch) = chars.next() {
+                if let Some(ch) = chars.next() {
                     match ch {
                         'k' => {
                             let rest: String = chars.collect();
@@ -55,7 +55,6 @@ pub fn run(args: &[String]) -> i32 {
                                 Some(s) => kill_after = Some(s),
                                 None => { eprintln!("timeout: invalid time interval '{}'", val); return 1; }
                             }
-                            break;
                         }
                         's' => {
                             let rest: String = chars.collect();
@@ -68,7 +67,6 @@ pub fn run(args: &[String]) -> i32 {
                                 Some(s) => signal = s,
                                 None => { eprintln!("timeout: invalid signal '{}'", val); return 1; }
                             }
-                            break;
                         }
                         _ => { eprintln!("timeout: invalid option -- '{}'", ch); return 1; }
                     }
