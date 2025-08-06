@@ -65,7 +65,7 @@ fn compute(r: &mut dyn Read, sysv: bool) -> (u32, u64) {
         }
         let r = (s & 0xffff).wrapping_add(s >> 16);
         let r = (r & 0xffff).wrapping_add(r >> 16);
-        let blocks = (total_bytes + 511) / 512;
+        let blocks = total_bytes.div_ceil(512);
         (r & 0xffff, blocks)
     } else {
         // BSD: 16-bit rotate-right checksum, 1024-byte blocks
@@ -79,7 +79,7 @@ fn compute(r: &mut dyn Read, sysv: bool) -> (u32, u64) {
             }
             total_bytes += n as u64;
         }
-        let blocks = (total_bytes + 1023) / 1024;
+        let blocks = total_bytes.div_ceil(1024);
         (cksum, blocks)
     }
 }
