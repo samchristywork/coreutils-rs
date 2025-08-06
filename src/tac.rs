@@ -22,7 +22,7 @@ pub fn run(args: &[String]) -> i32 {
                 separator = s[0];
             }
             arg if arg.starts_with("--separator=") => {
-                let s = arg["--separator=".len()..].as_bytes();
+                let s = &arg.as_bytes()["--separator=".len()..];
                 if s.len() != 1 {
                     eprintln!("tac: separator must be a single byte");
                     return 1;
@@ -30,7 +30,7 @@ pub fn run(args: &[String]) -> i32 {
                 separator = s[0];
             }
             arg if arg.starts_with('-') && arg.len() > 1 && !arg.starts_with("--") => {
-                for ch in arg[1..].chars() {
+                if let Some(ch) = arg[1..].chars().next() {
                     match ch {
                         's' => {
                             i += 1;
@@ -44,7 +44,6 @@ pub fn run(args: &[String]) -> i32 {
                                 return 1;
                             }
                             separator = s[0];
-                            break;
                         }
                         _ => {
                             eprintln!("tac: invalid option -- '{}'", ch);
