@@ -189,7 +189,7 @@ fn canonicalize_path(path: &Path, missing_ok: bool) -> Option<PathBuf> {
     Some(resolved)
 }
 
-fn make_relative(path: &PathBuf, base: &PathBuf) -> Option<PathBuf> {
+fn make_relative(path: &Path, base: &Path) -> Option<PathBuf> {
     let path_comps: Vec<_> = path.components().collect();
     let base_comps: Vec<_> = base.components().collect();
 
