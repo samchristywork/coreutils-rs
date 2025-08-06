@@ -221,16 +221,14 @@ fn number_lines<R: BufRead, W: Write>(
         };
 
         if should_number {
-            if write!(out, "{:>width$}{}{}\n",
+            if writeln!(out, "{:>width$}{}{}",
                 line_num, opts.separator, content,
                 width = opts.width).is_err() {
                 return 1;
             }
             *line_num += opts.increment;
-        } else {
-            if write!(out, "{}{}\n", " ".repeat(opts.width + opts.separator.len()), content).is_err() {
-                return 1;
-            }
+        } else if writeln!(out, "{}{}", " ".repeat(opts.width + opts.separator.len()), content).is_err() {
+            return 1;
         }
     }
 
@@ -248,7 +246,7 @@ fn parse_style(s: &str) -> Option<Style> {
     }
 }
 
-fn long_opt_val<'a>(arg: &'a str, prefix: &str) -> Option<String> {
+fn long_opt_val(arg: &str, prefix: &str) -> Option<String> {
     arg.strip_prefix(prefix).map(|s| s.to_string())
 }
 
