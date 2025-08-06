@@ -52,7 +52,7 @@ fn format_once(fmt: &str, operands: &[String]) -> (String, usize) {
                     let mut oct = String::new();
                     for _ in 0..3 {
                         match chars.peek() {
-                            Some(&d) if d >= '0' && d <= '7' => { oct.push(d); chars.next(); }
+                            Some(&d) if ('0'..='7').contains(&d) => { oct.push(d); chars.next(); }
                             _ => break,
                         }
                     }
@@ -176,7 +176,7 @@ fn format_once(fmt: &str, operands: &[String]) -> (String, usize) {
 
 fn pad(s: &str, width: usize, left: bool, fill: char) -> String {
     if s.len() >= width { return s.to_string(); }
-    let padding: String = std::iter::repeat(fill).take(width - s.len()).collect();
+    let padding: String = std::iter::repeat_n(fill, width - s.len()).collect();
     if left { format!("{}{}", s, padding) } else { format!("{}{}", padding, s) }
 }
 
@@ -186,7 +186,7 @@ fn apply_numeric_flags(s: &str, flags: &str, width: usize, _prec: Option<&str>, 
     let show_sign = flags.contains('+');
     let space_sign = flags.contains(' ');
 
-    let (neg, digits) = if s.starts_with('-') { (true, &s[1..]) } else { (false, &s[..]) };
+    let (neg, digits) = if let Some(rest) = s.strip_prefix('-') { (true, rest) } else { (false, s) };
     let sign = if neg { "-" } else if show_sign { "+" } else if space_sign { " " } else { "" };
     let with_sign = format!("{}{}", sign, digits);
 
