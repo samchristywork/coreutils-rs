@@ -118,6 +118,7 @@ fn count_reader<R: BufRead>(reader: &mut R) -> Counts {
     counts
 }
 
+#[allow(clippy::too_many_arguments)]
 fn print_counts<W: io::Write>(
     counts: &Counts,
     label: &str,
