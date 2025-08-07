@@ -13,6 +13,21 @@ processing, checksums, user info, math, and more.
 
 ## Features
 
+- Multi-call binary: invoke as `coreutils-rs <command>` or symlink the binary
+- File and directory operations: `ls`, `cp`, `mv`, `rm`, `mkdir`, `rmdir`
+- File viewing and text utilities: `cat`, `tac`, `head`, `tail`, `less`, `more`, `nl`, `wc`
+- Text processing: `cut`, `paste`, `sort`, `uniq`, `tr`, `comm`, `join`
+- Searching and comparing: `cmp`, `diff`
+- Permissions and ownership: `chmod`, `chown`, `chgrp`
+- Disk and filesystem: `df`, `du`, `stat`, `sync`
+- Date and time: `date`, `sleep`, `timeout`
+- Math and sequences: `expr`, `seq`, `factor`
+- Symbolic and hard links: `ln`, `readlink`
+- User and group info: `whoami`, `id`, `groups`, `users`
+- Checksums: `md5sum`, `sha1sum`, `sha256sum`, `sha512sum`, `sum`, `cksum`
+- Path manipulation: `basename`, `dirname`, `realpath`
+- Miscellaneous: `echo`, `printf`, `yes`, `true`, `false`, `test`, `[`
+
 ## Usage
 
 ## Dependencies
