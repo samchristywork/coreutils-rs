@@ -43,6 +43,11 @@ ln -s coreutils-rs ls
 
 ## Dependencies
 
+```
+cargo
+rustc
+```
+
 ## License
 
 This work is licensed under the GNU General Public License version 3 (GPLv3).
