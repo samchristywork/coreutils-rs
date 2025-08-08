@@ -30,6 +30,17 @@ processing, checksums, user info, math, and more.
 
 ## Usage
 
+```
+Usage: coreutils-rs <command> [args...]
+```
+
+The binary can also be invoked via a symlink named after the desired command:
+
+```
+ln -s coreutils-rs ls
+./ls
+```
+
 ## Dependencies
 
 ## License
